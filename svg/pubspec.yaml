@@ -10,7 +10,8 @@ environment:
 # Add regular dependencies here.
 dependencies:
   tikd:
-    git: https://github.com/liyuqian/tikd
+     git: https://github.com/liyuqian/tikd
+  vector_math: ^2.1.4
 
 dev_dependencies:
   lints: ^2.1.0
