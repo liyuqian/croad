@@ -7,7 +7,7 @@ import 'package:vector_math/vector_math_64.dart';
 double rad(double degrees) => toRadian(degrees);
 
 void main() async {
-  final p = Picture();
+  final p = Picture()..backgroundColor = Color.white;
 
   // Horizon line
   const double kL = 10;

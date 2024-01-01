@@ -1,6 +1,6 @@
 # C Road -- see the road with a camera
 
-Use a single smart-phone camera to see:
+Use a single smartphone camera to see:
 1. $h$: the heading of the road
 2. $d$: the distance that the vehicle can drive or see forward
 3. $r$: the right-side distance that the vehicle can drift
@@ -26,3 +26,13 @@ Additionally, we also detect some camera parameters:
 
 That is, the horizon line in the image should go through $(W / 2, H - H_0)$ of
 the image with a tilt angle of $R_0$.
+
+For $R_0$, smartphone sensors like accelerometers and gyroscopes could
+provide direct readings.
+
+The $H_0 and R_0$ have capital letters because they should be relatively
+constant throughout the video. (Image width, height $W, H$ are also constants.)
+
+In the future, we could also return a list of $(h_i, d_i, r_i, l_i)$ where the
+$i$-th element corresponds to the road information at a given (constant) pixel
+height $Y_i$. This allows us to express a curved road.
