@@ -30,7 +30,7 @@ the image with a tilt angle of $R_0$.
 For $R_0$, smartphone sensors like accelerometers and gyroscopes could
 provide direct readings.
 
-The $H_0 and R_0$ have capital letters because they should be relatively
+The $H_0$ and $R_0$ have capital letters because they should be relatively
 constant throughout the video. (Image width, height $W, H$ are also constants.)
 
 In the future, we could also return a list of $(h_i, d_i, r_i, l_i)$ where the
