@@ -1,4 +1,10 @@
 Some links to the open-source 3rd party training data:
+- https://registry.opendata.aws/
+  - Search "driving".
+- https://registry.opendata.aws/boreas/
+  - https://creativecommons.org/licenses/by/4.0
+- https://registry.opendata.aws/aev-a2d2/
+  - https://creativecommons.org/licenses/by-nd/4.0
 - https://waymo.com/open/data/perception/
   - Non-commercial use license. Research only.
 - https://www.nuscenes.org/nuscenes
