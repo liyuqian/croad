@@ -11,3 +11,11 @@ Some links to the open-source 3rd party training data:
   - Non-commercial use license. Research only.
 - https://www.cvlibs.net/datasets/kitti/
   - Non-commercial use license. Research only.
+
+Some tools that might be useful:
+- https://huggingface.co/facebook/detr-resnet-50
+  - Detect objects (e.g., cars, trucks, pedestrians) offline
+- [cv2.createLineSegmentDetector][1]
+  - Detect curbs or boundaries
+
+[1]: https://docs.opencv.org/3.4/db/d73/classcv_1_1LineSegmentDetector.html
