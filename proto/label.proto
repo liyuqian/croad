@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package croad;
+
+message Line {
+  double x0 = 1;
+  double y0 = 2;
+  double x1 = 3;
+  double y1 = 4;
+}
+
+message LineDetection {
+  repeated Line lines = 1;
+}
+
+message LabelRequest {
+  bytes png = 1;
+}
+
+service LineDetector {
+  rpc DetectLines(LabelRequest) returns (LineDetection);
+}
