@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:grpc/grpc.dart';
 import 'package:roadart/proto/label.pbgrpc.dart';
+import 'package:roadart/src/line_filter.dart';
 
 class Labeler {
   Labeler() {
@@ -20,7 +21,12 @@ class Labeler {
     print('Sending request...');
     final LineDetection detection = await _client
         .detectLines(LineRequest(videoPath: videoPath, frameIndex: frameIndex));
-    print('Detection: ${detection.lines.length} lines detected');
+    final String size = '${detection.width}x${detection.height}';
+    print('Detection: ${detection.lines.length} lines detected ($size)');
+
+    final filtered = LineFilter().filter(detection);
+    print('Filtered: ${filtered.length} lines remaining');
+    await _client.plot(PlotRequest(lines: filtered, color: 'green'));
   }
 
   late ClientChannel _channel;

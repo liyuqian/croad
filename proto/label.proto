@@ -23,6 +23,14 @@ message LineRequest {
   int32 frame_index = 2;
 }
 
+message PlotRequest {
+  repeated Line lines = 1;
+  string color = 2;
+}
+
+message Empty {}
+
 service LineDetector {
   rpc DetectLines(LineRequest) returns (LineDetection);
+  rpc Plot(PlotRequest) returns (Empty);
 }
