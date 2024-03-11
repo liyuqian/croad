@@ -10,13 +10,19 @@ message Line {
 }
 
 message LineDetection {
+  // (0, 0) is the top-left corner. Axis x is horizontal and y is vertical.
   repeated Line lines = 1;
+
+  // Image width and height
+  int32 width = 2;
+  int32 height = 3;
 }
 
-message LabelRequest {
-  bytes png = 1;
+message LineRequest {
+  string video_path = 1;
+  int32 frame_index = 2;
 }
 
 service LineDetector {
-  rpc DetectLines(LabelRequest) returns (LineDetection);
+  rpc DetectLines(LineRequest) returns (LineDetection);
 }
