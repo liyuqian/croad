@@ -9,13 +9,16 @@ void main() {
     final filter = LineFilter();
     final lineDetection = pb.LineDetection.fromBuffer(
         File('test/data/line_detection_2023121012_11001.pb').readAsBytesSync());
-    final List<Line> result = filter.process(lineDetection);
-    print('filtered ${result.length} lines');
-    for (final Line line in result) {
-      print('x(${lineDetection.height}) = ${line.x(lineDetection.height)}');
-      print('proto = \n${line.proto}\n');
-    }
+    final List<Line> filtered = filter.process(lineDetection);
+    expect(filtered.length, 8);
+    expect(filter.minBottomX, closeTo(840.94, 0.01));
   });
 
-  // TODO TEST horizontal lines
+  test('LineFilter ignores horizontal lines', () {
+    final lineDetection = pb.LineDetection();
+    lineDetection.width = lineDetection.height = 200;
+    lineDetection.lines.add(pb.Line(x0: 0, y0: 100, x1: 200, y1: 100));
+    final List<Line> result = LineFilter().process(lineDetection);
+    expect(result, isEmpty);
+  });
 }

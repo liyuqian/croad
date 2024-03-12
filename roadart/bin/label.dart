@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:grpc/grpc.dart';
@@ -24,18 +25,42 @@ class Labeler {
     final String size = '${detection.width}x${detection.height}';
     print('Detection: ${detection.lines.length} lines detected ($size)');
 
-    final filtered = LineFilter().process(detection);
+    final filter = LineFilter();
+    final filtered = filter.process(detection);
     print('Filtered: ${filtered.length} lines remaining');
+    print('Min bottom x: ${filter.minBottomX}');
     await _client.plot(
-        pb.PlotRequest(lines: filtered.map((l) => l.proto), color: 'green'));
+        pb.PlotRequest(lines: filtered.map((l) => l.proto), color: 'yellow'));
   }
 
   late ClientChannel _channel;
   late pb.LineDetectorClient _client;
 }
 
-Future<void> main(List<String> arguments) async {
+Future<void> listenKey(String videoPath, int frameIndex) async {
   final labeler = Labeler();
-  await labeler.label(arguments[0], int.parse(arguments[1]));
-  await labeler.shutdown();
+  await labeler.label(videoPath, frameIndex);
+  stdin.echoMode = false;
+  stdin.lineMode = false;
+  late StreamSubscription sub;
+  sub = stdin.map<String>(String.fromCharCodes).listen((String key) async {
+    const int kFrameStep = 30;
+    if (key == 'q') {
+      print('Quitting...');
+      sub.cancel();
+      await labeler.shutdown();
+    } else if (key == 'l') {
+      print('frame: ${frameIndex += kFrameStep}');
+      await labeler.label(videoPath, frameIndex);
+    } else if (key == 'h') {
+      print('frame: ${frameIndex -= kFrameStep}');
+      await labeler.label(videoPath, frameIndex);
+    } else {
+      print('Unknown key: $key');
+    }
+  });
+}
+
+Future<void> main(List<String> arguments) async {
+  await listenKey(arguments[0], int.parse(arguments[1]));
 }

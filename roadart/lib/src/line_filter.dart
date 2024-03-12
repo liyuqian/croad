@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:roadart/proto/label.pb.dart' as pb;
 import 'package:vector_math/vector_math_64.dart';
@@ -41,19 +42,27 @@ class LineFilter {
       final double xRatio = line.mid.x / detection.width;
       final double yRatio = line.mid.y / detection.height;
       if (!_xRatioRange.contains(xRatio) ||
-              !_yRatioRange.contains(yRatio) ||
-              line.length < _minLength ||
-              line.isHorizontal || // No horizontal lines with undefined dx/dy
-              line.dxOverDy < 0 // Only lines from top-left to bottom-right
-          ) {
+          !_yRatioRange.contains(yRatio) ||
+          line.length < _minLength ||
+          line.isHorizontal || // No horizontal lines with undefined dx/dy
+          line.dxOverDy < _minDxOverDy) {
         continue;
       }
       filtered.add(line);
+      _minBottomX = min(_minBottomX, line.x(detection.height));
     }
     return filtered;
   }
 
+  /// The minimum x value for filtered lines at the bottom of the image. Only
+  /// valid after calling [process].
+  double get minBottomX => _minBottomX;
+  double _minBottomX = double.infinity;
+
   final Range _yRatioRange = Range(0.4, 0.8);
   final Range _xRatioRange = Range(0.5, 0.9);
   final double _minLength = 20.0;
+
+  // At least 30 degrees from top-left to bottom-right.
+  final double _minDxOverDy = tan(30 * pi / 180);
 }
