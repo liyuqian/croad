@@ -19,18 +19,38 @@ class Labeler {
   Future<void> shutdown() async => await _channel.shutdown();
 
   Future<void> label(String videoPath, int frameIndex) async {
+    final stopwatch = Stopwatch()..start();
     print('Sending request...');
     final pb.LineDetection detection = await _client.detectLines(
         pb.LineRequest(videoPath: videoPath, frameIndex: frameIndex));
     final String size = '${detection.width}x${detection.height}';
     print('Detection: ${detection.lines.length} lines detected ($size)');
+    print('Received detection in ${stopwatch.elapsedMilliseconds}ms');
 
+    stopwatch.reset();
     final filter = LineFilter();
-    final filtered = filter.process(detection);
-    print('Filtered: ${filtered.length} lines remaining');
+    filter.process(detection);
+    print('#R=${filter.rightLines.length}, #L=${filter.leftLines.length}');
     print('Min bottom x: ${filter.minBottomX}');
-    await _client.plot(
-        pb.PlotRequest(lines: filtered.map((l) => l.proto), color: 'yellow'));
+    print('Processed in ${stopwatch.elapsedMilliseconds}ms');
+
+    stopwatch.reset();
+    await _client.plot(pb.PlotRequest(
+        lines: filter.rightLines.map((l) => l.pbLine), lineColor: 'yellow'));
+    await _client.plot(pb.PlotRequest(
+        lines: filter.leftLines.map((l) => l.pbLine), lineColor: 'green'));
+    await _client.plot(pb.PlotRequest(
+      points: filter.intersections.map((v) => vec2Proto(v)),
+      pointColor: 'blue',
+    ));
+    if (filter.guessedPoint != null) {
+      await _client.plot(pb.PlotRequest(
+        points: [vec2Proto(filter.guessedPoint!)],
+        pointColor: 'red',
+      ));
+    }
+    await _client.exportPng(pb.Empty());
+    print('Plotted in ${stopwatch.elapsedMilliseconds}ms\n');
   }
 
   late ClientChannel _channel;
@@ -43,6 +63,11 @@ Future<void> listenKey(String videoPath, int frameIndex) async {
   stdin.echoMode = false;
   stdin.lineMode = false;
   late StreamSubscription sub;
+  Future<void> update(int frameDelta) async {
+    print('frame: ${frameIndex += frameDelta}');
+    await labeler.label(videoPath, frameIndex);
+  }
+
   sub = stdin.map<String>(String.fromCharCodes).listen((String key) async {
     const int kFrameStep = 30;
     if (key == 'q') {
@@ -50,11 +75,13 @@ Future<void> listenKey(String videoPath, int frameIndex) async {
       sub.cancel();
       await labeler.shutdown();
     } else if (key == 'l') {
-      print('frame: ${frameIndex += kFrameStep}');
-      await labeler.label(videoPath, frameIndex);
+      await update(kFrameStep);
     } else if (key == 'h') {
-      print('frame: ${frameIndex -= kFrameStep}');
-      await labeler.label(videoPath, frameIndex);
+      await update(-kFrameStep);
+    } else if (key == 'k') {
+      await update(1);
+    } else if (key == 'j') {
+      await update(-1);
     } else {
       print('Unknown key: $key');
     }

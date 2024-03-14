@@ -15,8 +15,8 @@ PNG_PATH = "/tmp/line_detection.png"
 
 class LineDetector(label_pb2_grpc.LineDetectorServicer):
     def DetectLines(self, request: label_pb2.LineRequest, context):
-        print(f"Received request {request.video_path} {request.frame_index}")
         try:
+            print(f"Detecting {request.video_path} {request.frame_index}")
             return self._detect(request)
         except Exception as e:
             print(f"Error: {e}")
@@ -24,9 +24,20 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
             raise
 
     def Plot(self, request: label_pb2.PlotRequest, context):
-        print(f"Received plot request with {len(request.lines)} lines.")
         try:
+            n_lines, n_points = len(request.lines), len(request.points)
+            print(f"Plotting {n_lines} lines and {n_points} points.")
             self._plot(request)
+            return label_pb2.Empty()
+        except Exception as e:
+            print(f"Error: {e}")
+            print(traceback.format_exc())
+            raise
+
+    def ExportPng(self, request, context):
+        try:
+            print(f"Exporting {PNG_PATH}")
+            self._savePng()
             return label_pb2.Empty()
         except Exception as e:
             print(f"Error: {e}")
@@ -39,9 +50,15 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
                 x=[line.x0, line.x1],
                 y=[line.y0, line.y1],
                 mode="lines",
-                line=dict(color=request.color),
+                line=dict(color=request.line_color),
             )
-        self._savePng()
+        if len(request.points) > 0:
+            self._fig.add_scatter(
+                x=[p.x for p in request.points],
+                y=[p.y for p in request.points],
+                mode="markers",
+                marker=dict(color=request.point_color),
+            )
 
     def _detect(self, request: label_pb2.LineRequest):
         cap = cv2.VideoCapture(request.video_path)
@@ -60,7 +77,6 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
             detection.lines.append(label_pb2.Line(x0=x0, y0=y0, x1=x1, y1=y1))
 
         self._fig = px.imshow(rgb)
-        self._savePng()
 
         return detection
 

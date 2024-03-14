@@ -9,6 +9,11 @@ message Line {
   double y1 = 4;
 }
 
+message Point {
+  double x = 1;
+  double y = 2;
+}
+
 message LineDetection {
   // (0, 0) is the top-left corner. Axis x is horizontal and y is vertical.
   repeated Line lines = 1;
@@ -25,7 +30,10 @@ message LineRequest {
 
 message PlotRequest {
   repeated Line lines = 1;
-  string color = 2;
+  string line_color = 2;
+
+  repeated Point points = 3;
+  string point_color = 4;
 }
 
 message Empty {}
@@ -33,4 +41,5 @@ message Empty {}
 service LineDetector {
   rpc DetectLines(LineRequest) returns (LineDetection);
   rpc Plot(PlotRequest) returns (Empty);
+  rpc ExportPng(Empty) returns (Empty);
 }
