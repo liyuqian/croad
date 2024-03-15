@@ -1,4 +1,8 @@
 Some links to the open-source 3rd party training data:
+- https://github.com/commaai/comma10k
+  - No restriction. MIT license.
+- https://github.com/commaai/comma2k19
+  - MIT license.
 - https://registry.opendata.aws/
   - Search "driving".
 - https://registry.opendata.aws/boreas/
@@ -17,5 +21,7 @@ Some tools that might be useful:
   - Detect objects (e.g., cars, trucks, pedestrians) offline
 - [cv2.createLineSegmentDetector][1]
   - Detect curbs or boundaries
+- https://github.com/duducosmos/defisheye
+- https://github.com/Turoad/lanedet
 
 [1]: https://docs.opencv.org/3.4/db/d73/classcv_1_1LineSegmentDetector.html
