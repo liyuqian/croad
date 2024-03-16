@@ -3,6 +3,7 @@ import traceback
 
 import cv2
 import grpc
+import numpy as np
 import plotly.express as px
 import plotly.graph_objs as go
 
@@ -61,10 +62,31 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
             )
 
     def _detect(self, request: label_pb2.LineRequest):
+        if request.video_path:
+            return self._detectVideo(request)
+        else:
+            return self._detectImage(request)
+
+    def _detectImage(self, request: label_pb2.LineRequest):
+        bgr = cv2.imread(request.image_path)
+        if len(request.mask_colors) > 0:
+            combined = np.zeros(bgr.shape, dtype=np.uint8)
+            for hex in request.mask_colors:
+                color = tuple(int(hex[i:i+2], 16) for i in (5, 3, 1))
+                mask = cv2.inRange(bgr, color, color)
+                masked = cv2.bitwise_and(bgr, bgr, mask=mask)
+                combined = cv2.bitwise_or(combined, masked)
+            bgr = combined
+        return self._detectBgr(bgr)
+
+    def _detectVideo(self, request: label_pb2.LineRequest):
         cap = cv2.VideoCapture(request.video_path)
         cap.set(cv2.CAP_PROP_POS_FRAMES, request.frame_index)
         ret, bgr = cap.read()
         cap.release()
+        return self._detectBgr(bgr)
+
+    def _detectBgr(self, bgr):
         rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
         gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
         lines, _, _, _ = self._detector.detect(gray)
@@ -72,9 +94,10 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
             width=bgr.shape[1],
             height=bgr.shape[0],
         )
-        for line in lines:
-            x0, y0, x1, y1 = line[0]
-            detection.lines.append(label_pb2.Line(x0=x0, y0=y0, x1=x1, y1=y1))
+        if lines is not None:
+            for line in lines:
+                x0, y0, x1, y1 = line[0]
+                detection.lines.append(label_pb2.Line(x0=x0, y0=y0, x1=x1, y1=y1))
 
         self._fig = px.imshow(rgb)
 

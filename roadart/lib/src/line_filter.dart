@@ -162,7 +162,7 @@ class LineFilter {
   }
 
   static const double _kMinLength = 20.0;
-  static final Range _yRatioRange = Range(0.4, 0.8);
+  static final Range _yRatioRange = Range(0.4, 0.65);
 
   final _rightConditions = CombinedCondition([
     LengthCondition(_kMinLength),

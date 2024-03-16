@@ -26,6 +26,10 @@ message LineDetection {
 message LineRequest {
   string video_path = 1;
   int32 frame_index = 2;
+  string image_path = 3;
+
+  // If nonempty, remove all other colors from the image.
+  repeated string mask_colors = 4;
 }
 
 message PlotRequest {

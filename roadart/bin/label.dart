@@ -18,11 +18,22 @@ class Labeler {
 
   Future<void> shutdown() async => await _channel.shutdown();
 
-  Future<void> label(String videoPath, int frameIndex) async {
+  Future<void> labelVideo(String videoPath, int frameIndex) async {
+    await _handleRequest(
+        pb.LineRequest(videoPath: videoPath, frameIndex: frameIndex));
+  }
+
+  Future<void> labelImage(String imagePath) async {
+    await _handleRequest(pb.LineRequest(imagePath: imagePath, maskColors: [
+      '#402020', // road in comma10k
+      '#ff0000', // lane markings in comma10k
+    ]));
+  }
+
+  Future<void> _handleRequest(pb.LineRequest request) async {
     final stopwatch = Stopwatch()..start();
     print('Sending request...');
-    final pb.LineDetection detection = await _client.detectLines(
-        pb.LineRequest(videoPath: videoPath, frameIndex: frameIndex));
+    final pb.LineDetection detection = await _client.detectLines(request);
     final String size = '${detection.width}x${detection.height}';
     print('Detection: ${detection.lines.length} lines detected ($size)');
     print('Received detection in ${stopwatch.elapsedMilliseconds}ms');
@@ -57,17 +68,17 @@ class Labeler {
   late pb.LineDetectorClient _client;
 }
 
-Future<void> listenKey(String videoPath, int frameIndex) async {
+Future<void> listenKeyForVideo(String videoPath, int frameIndex) async {
   final labeler = Labeler();
-  await labeler.label(videoPath, frameIndex);
+  await labeler.labelVideo(videoPath, frameIndex);
   stdin.echoMode = false;
   stdin.lineMode = false;
-  late StreamSubscription sub;
   Future<void> update(int frameDelta) async {
     print('frame: ${frameIndex += frameDelta}');
-    await labeler.label(videoPath, frameIndex);
+    await labeler.labelVideo(videoPath, frameIndex);
   }
 
+  late StreamSubscription sub;
   sub = stdin.map<String>(String.fromCharCodes).listen((String key) async {
     const int kFrameStep = 30;
     if (key == 'q') {
@@ -88,6 +99,46 @@ Future<void> listenKey(String videoPath, int frameIndex) async {
   });
 }
 
+Future<void> listenKeyForImage(String imageDir) async {
+  final labeler = Labeler();
+  final images = Directory(imageDir)
+      .listSync()
+      .whereType<File>()
+      .map((f) => f.path)
+      .toList();
+  int index = 0;
+  await labeler.labelImage(images[index]);
+  stdin.echoMode = false;
+  stdin.lineMode = false;
+  Future<void> update(int delta) async {
+    index = (index + delta) % images.length;
+    if (index < 0) {
+      index = images.length - 1;
+    }
+    print('image: ${images[index]}');
+    await labeler.labelImage(images[index]);
+  }
+
+  late StreamSubscription sub;
+  sub = stdin.map<String>(String.fromCharCodes).listen((String key) async {
+    if (key == 'q') {
+      print('Quitting...');
+      sub.cancel();
+      await labeler.shutdown();
+    } else if (key == 'l') {
+      await update(1);
+    } else if (key == 'h') {
+      await update(-1);
+    } else {
+      print('Unknown key: $key');
+    }
+  });
+}
+
 Future<void> main(List<String> arguments) async {
-  await listenKey(arguments[0], int.parse(arguments[1]));
+  if (arguments.length == 1) {
+    await listenKeyForImage(arguments[0]);
+  } else {
+    await listenKeyForVideo(arguments[0], int.parse(arguments[1]));
+  }
 }
