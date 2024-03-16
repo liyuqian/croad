@@ -67,16 +67,19 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
         else:
             return self._detectImage(request)
 
+    def _hex2bgr(self, hex):
+        return tuple(int(hex[i:i+2], 16) for i in (5, 3, 1))
+
     def _detectImage(self, request: label_pb2.LineRequest):
         bgr = cv2.imread(request.image_path)
-        if len(request.mask_colors) > 0:
-            combined = np.zeros(bgr.shape, dtype=np.uint8)
-            for hex in request.mask_colors:
-                color = tuple(int(hex[i:i+2], 16) for i in (5, 3, 1))
-                mask = cv2.inRange(bgr, color, color)
-                masked = cv2.bitwise_and(bgr, bgr, mask=mask)
-                combined = cv2.bitwise_or(combined, masked)
-            bgr = combined
+        for mapping in request.color_mappings:
+            from_color = self._hex2bgr(mapping.fromHex)
+            to_color = self._hex2bgr(mapping.toHex)
+            mask = cv2.inRange(bgr, from_color, from_color)
+            rest = cv2.bitwise_and(bgr, bgr, mask=~mask)
+            full = np.full(bgr.shape, to_color, dtype=np.uint8)
+            new = cv2.bitwise_and(full, full, mask=mask)
+            bgr = cv2.bitwise_or(rest, new)
         return self._detectBgr(bgr)
 
     def _detectVideo(self, request: label_pb2.LineRequest):

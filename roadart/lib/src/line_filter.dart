@@ -162,17 +162,17 @@ class LineFilter {
   }
 
   static const double _kMinLength = 20.0;
-  static final Range _yRatioRange = Range(0.4, 0.65);
+  static final Range _yRatioRange = Range(0.4, 0.95);
 
   final _rightConditions = CombinedCondition([
     LengthCondition(_kMinLength),
-    RatioCondition(Range(0.5, 0.9), _yRatioRange),
+    RatioCondition(Range(0.5, 1.0), _yRatioRange),
     RightSlopeCondition(),
   ]);
 
   final _leftConditions = CombinedCondition([
     LengthCondition(_kMinLength),
-    RatioCondition(Range(0.1, 0.5), _yRatioRange),
+    RatioCondition(Range(0.0, 0.5), _yRatioRange),
     LeftSlopeCondition(),
   ]);
 

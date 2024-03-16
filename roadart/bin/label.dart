@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:grpc/grpc.dart';
 import 'package:roadart/proto/label.pbgrpc.dart' as pb;
 import 'package:roadart/src/line_filter.dart';
+import 'package:path/path.dart' as p;
 
 class Labeler {
   Labeler() {
@@ -24,9 +25,13 @@ class Labeler {
   }
 
   Future<void> labelImage(String imagePath) async {
-    await _handleRequest(pb.LineRequest(imagePath: imagePath, maskColors: [
-      '#402020', // road in comma10k
-      '#ff0000', // lane markings in comma10k
+    await _handleRequest(pb.LineRequest(imagePath: imagePath, colorMappings: [
+      // comma10k my car to road
+      pb.ColorMapping(fromHex: '#cc00ff', toHex: '#402020'),
+      // comma10k movable to road
+      pb.ColorMapping(fromHex: '#00ff66', toHex: '#402020'),
+      // comma10k movable_in_my_car to road
+      pb.ColorMapping(fromHex: '#00ccff', toHex: '#402020'),
     ]));
   }
 
@@ -99,21 +104,42 @@ Future<void> listenKeyForVideo(String videoPath, int frameIndex) async {
   });
 }
 
-Future<void> listenKeyForImage(String imageDir) async {
+Future<void> listenKeyForImage(String imageDirOrFile) async {
   final labeler = Labeler();
+  late String imageDir;
+  late String imageFile;
+  if (!FileSystemEntity.isDirectorySync(imageDirOrFile)) {
+    imageDir = File(imageDirOrFile).parent.path;
+    imageFile = p.basename(File(imageDirOrFile).path);
+  } else {
+    imageDir = imageDirOrFile;
+    imageFile = '';
+  }
   final images = Directory(imageDir)
       .listSync()
       .whereType<File>()
       .map((f) => f.path)
       .toList();
   int index = 0;
+  for (int i = 0; i < images.length; ++i) {
+    if (p.basename(images[i]) == imageFile) {
+      index = i;
+      break;
+    }
+  }
   await labeler.labelImage(images[index]);
   stdin.echoMode = false;
   stdin.lineMode = false;
   Future<void> update(int delta) async {
-    index = (index + delta) % images.length;
-    if (index < 0) {
-      index = images.length - 1;
+    while (true) {
+      index = (index + delta) % images.length;
+      if (index < 0) {
+        index = images.length - 1;
+      }
+      const int kMinSize = 5000; // Ignore images smaller than 5KB
+      if (File(images[index]).lengthSync() >= kMinSize) {
+        break;
+      }
     }
     print('image: ${images[index]}');
     await labeler.labelImage(images[index]);

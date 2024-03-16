@@ -23,13 +23,17 @@ message LineDetection {
   int32 height = 3;
 }
 
+message ColorMapping {
+  string fromHex = 1;
+  string toHex = 2;
+}
+
 message LineRequest {
   string video_path = 1;
   int32 frame_index = 2;
   string image_path = 3;
 
-  // If nonempty, remove all other colors from the image.
-  repeated string mask_colors = 4;
+  repeated ColorMapping color_mappings = 4;
 }
 
 message PlotRequest {
