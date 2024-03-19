@@ -21,4 +21,51 @@ void main() {
     final filter = LineFilter()..process(lineDetection);
     expect(filter.rightLines, isEmpty);
   });
+
+  test('LineFilter discards intersection with false left vanishing point', () {
+    final filter = LineFilter();
+    final lineDetection = pb.LineDetection.fromBuffer(
+        File('test/data/line_detection_comma10k_00008_e_a1fc603d9a8ddfc4.pb')
+            .readAsBytesSync());
+    filter.process(lineDetection);
+    expect(filter.guessedPoint, isNull);
+  });
+
+  test('LineFilter finds vanishing point with many horizontal lines', () {
+    final filter = LineFilter();
+    final lineDetection = pb.LineDetection.fromBuffer(
+        File('test/data/line_detection_comma10k_00189_f_20f59690c1da9379.pb')
+            .readAsBytesSync());
+    filter.process(lineDetection);
+    expect(filter.guessedPoint, isNotNull);
+    expect(filter.guessedPoint!.x, closeTo(959.0, 0.1));
+    expect(filter.guessedPoint!.y, closeTo(382.9, 0.1));
+  });
+
+  test('LineFilter discards median point without enough nearby weights', () {
+    final filter = LineFilter();
+    final lineDetection = pb.LineDetection.fromBuffer(
+        File('test/data/line_detection_comma10k_00164_e_a1fc603d9a8ddfc4.pb')
+            .readAsBytesSync());
+    filter.process(lineDetection);
+    expect(filter.guessedPoint, isNull);
+  });
+
+  test('LineFilter discards median point without nearby intersections', () {
+    final filter = LineFilter();
+    final lineDetection = pb.LineDetection.fromBuffer(
+        File('test/data/line_detection_comma10k_00345_e_4f0aab72f56d7cd9.pb')
+            .readAsBytesSync());
+    filter.process(lineDetection);
+    expect(filter.guessedPoint, isNull);
+  });
+
+  test('LineFilter discards vanishing point with tiny right line', () {
+    final filter = LineFilter();
+    final lineDetection = pb.LineDetection.fromBuffer(
+        File('test/data/line_detection_comma10k_00040_f_5352b3c0dcecc48d.pb')
+            .readAsBytesSync());
+    filter.process(lineDetection);
+    expect(filter.guessedPoint, isNull);
+  });
 }

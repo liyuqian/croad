@@ -40,8 +40,11 @@ class Labeler {
     print('Sending request...');
     final pb.LineDetection detection = await _client.detectLines(request);
     final String size = '${detection.width}x${detection.height}';
+    const kDetectionProtoDump = '/tmp/line_detection.pb';
+    File(kDetectionProtoDump).writeAsBytesSync(detection.writeToBuffer());
     print('Detection: ${detection.lines.length} lines detected ($size)');
     print('Received detection in ${stopwatch.elapsedMilliseconds}ms');
+    print('Detection proto saved to $kDetectionProtoDump');
 
     stopwatch.reset();
     final filter = LineFilter();
@@ -60,6 +63,7 @@ class Labeler {
       pointColor: 'blue',
     ));
     if (filter.guessedPoint != null) {
+      print('Guessed point: ${filter.guessedPoint}');
       await _client.plot(pb.PlotRequest(
         points: [vec2Proto(filter.guessedPoint!)],
         pointColor: 'red',
@@ -142,6 +146,9 @@ Future<void> listenKeyForImage(String imageDirOrFile) async {
       }
     }
     print('image: ${images[index]}');
+    if (images[index].contains('masks')) {
+      print('original: ${images[index].replaceAll('masks', 'imgs')}');
+    }
     await labeler.labelImage(images[index]);
   }
 

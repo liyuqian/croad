@@ -7,7 +7,7 @@ import 'package:vector_math/vector_math_64.dart';
 const double kEpsilon = 1e-8;
 
 class Range {
-  Range(this.min, this.max);
+  const Range(this.min, this.max);
   final double min, max;
   bool contains(double value) => value >= min && value <= max;
 }
@@ -101,6 +101,17 @@ class LineFilter {
   static const bool kSaveProto = false;
   static const kSaveFile = '/tmp/line_detection.pb';
 
+  static const double kMinLength = 20.0;
+  static const Range kYRatioRange = Range(0.4, 0.95);
+  static const Range kLeftXRange = Range(0.0, 0.5);
+  static const Range kRightXRange = Range(0.5, 1.0);
+  static const Range kGuessXRange = Range(0.3, 0.7);
+
+  static const double kGuessNeighborRatio = 0.01; // 1% of width/height
+
+  // 20% width * 20% height. Or 100 * 2% width * 2% height.
+  static const double kMinGuessNeighborWeightSumRatio = 0.04;
+
   void process(pb.LineDetection detection) {
     if (kSaveProto) {
       File(kSaveFile).writeAsBytesSync(detection.writeToBuffer());
@@ -135,10 +146,30 @@ class LineFilter {
 
     if (_intersections.isNotEmpty) {
       _medianPoint = Vector2(_median(_weightedX), _median(_weightedY));
+      _guess(detection);
     }
   }
 
-  Vector2? get guessedPoint => _medianPoint;
+  void _guess(pb.LineDetection detection) {
+    _guessedPoint = null;
+    if (_medianPoint == null) return;
+    if (!kGuessXRange.contains(_medianPoint!.x / detection.width)) return;
+    double neighborWeight = 0;
+    for (int i = 0; i < _intersections.length; ++i) {
+      final Vector2 diff = _intersections[i] - _medianPoint!;
+      if (diff.x.abs() < kGuessNeighborRatio * detection.width &&
+          diff.y.abs() < kGuessNeighborRatio * detection.height) {
+        neighborWeight += _weights[i] / detection.width / detection.height;
+      }
+    }
+    if (neighborWeight < kMinGuessNeighborWeightSumRatio) return;
+    _guessedPoint = _medianPoint;
+  }
+
+  /// Guessed vanishing point where the (straight) road points to.
+  Vector2? get guessedPoint => _guessedPoint;
+
+  /// List of all intersection bewteen [leftLines] and [rightLines].
   List<Vector2> get intersections => _intersections;
 
   List<Line> get leftLines => _leftLines;
@@ -161,18 +192,15 @@ class LineFilter {
     return list.last.value;
   }
 
-  static const double _kMinLength = 20.0;
-  static final Range _yRatioRange = Range(0.4, 0.95);
-
   final _rightConditions = CombinedCondition([
-    LengthCondition(_kMinLength),
-    RatioCondition(Range(0.5, 1.0), _yRatioRange),
+    LengthCondition(kMinLength),
+    RatioCondition(kRightXRange, kYRatioRange),
     RightSlopeCondition(),
   ]);
 
   final _leftConditions = CombinedCondition([
-    LengthCondition(_kMinLength),
-    RatioCondition(Range(0.0, 0.5), _yRatioRange),
+    LengthCondition(kMinLength),
+    RatioCondition(kLeftXRange, kYRatioRange),
     LeftSlopeCondition(),
   ]);
 
@@ -186,6 +214,7 @@ class LineFilter {
   final List<_WeightedDouble> _weightedY = [];
 
   Vector2? _medianPoint;
+  Vector2? _guessedPoint;
 }
 
 class _WeightedDouble implements Comparable<_WeightedDouble> {
