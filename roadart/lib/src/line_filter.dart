@@ -122,9 +122,14 @@ class LineFilter {
       final line = Line(pbLine, detection);
       if (_rightConditions.accepts(line)) {
         _rightLines.add(line);
-        _minBottomX = min(_minBottomX, line.x(detection.height));
+        final double bottomX = line.x(detection.height);
+        _minBottomX ??= bottomX;
+        _minBottomX = min(_minBottomX!, bottomX);
       } else if (_leftConditions.accepts(line)) {
         _leftLines.add(line);
+        final double bottomX = line.x(detection.height);
+        _maxBottomX ??= bottomX;
+        _maxBottomX = max(_maxBottomX!, bottomX);
       }
     }
 
@@ -177,8 +182,10 @@ class LineFilter {
 
   /// The minimum x value for filtered lines at the bottom of the image. Only
   /// valid after calling [process].
-  double get minBottomX => _minBottomX;
-  double _minBottomX = double.infinity;
+  double? get minBottomX => _minBottomX;
+  double? _minBottomX;
+  double? get maxBottomX => _maxBottomX;
+  double? _maxBottomX;
 
   double _median(List<_WeightedDouble> list) {
     list.sort();

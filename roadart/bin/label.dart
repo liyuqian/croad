@@ -51,6 +51,7 @@ class Labeler {
     filter.process(detection);
     print('#R=${filter.rightLines.length}, #L=${filter.leftLines.length}');
     print('Min bottom x: ${filter.minBottomX}');
+    print('Max bottom x: ${filter.minBottomX}');
     print('Processed in ${stopwatch.elapsedMilliseconds}ms');
 
     stopwatch.reset();
@@ -61,6 +62,8 @@ class Labeler {
     await _client.plot(pb.PlotRequest(
       points: filter.intersections.map((v) => vec2Proto(v)),
       pointColor: 'blue',
+      lines: _computeBoundaries(filter, detection),
+      lineColor: 'blue',
     ));
     if (filter.guessedPoint != null) {
       print('Guessed point: ${filter.guessedPoint}');
@@ -71,6 +74,29 @@ class Labeler {
     }
     await _client.exportPng(pb.Empty());
     print('Plotted in ${stopwatch.elapsedMilliseconds}ms\n');
+  }
+
+  List<pb.Line> _computeBoundaries(
+      LineFilter filter, pb.LineDetection detection) {
+    final List<pb.Line> boundaries = [];
+    if (filter.guessedPoint == null) return boundaries;
+    if (filter.minBottomX != null) {
+      boundaries.add(pb.Line(
+        x0: filter.guessedPoint!.x,
+        y0: filter.guessedPoint!.y,
+        x1: filter.minBottomX!,
+        y1: detection.height.toDouble(),
+      ));
+    }
+    if (filter.maxBottomX != null) {
+      boundaries.add(pb.Line(
+        x0: filter.guessedPoint!.x,
+        y0: filter.guessedPoint!.y,
+        x1: filter.maxBottomX!,
+        y1: detection.height.toDouble(),
+      ));
+    }
+    return boundaries;
   }
 
   late ClientChannel _channel;
