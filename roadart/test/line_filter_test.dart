@@ -68,4 +68,14 @@ void main() {
     filter.process(lineDetection);
     expect(filter.guessedPoint, isNull);
   });
+
+  test('LineFilter computes bottom x without lines disagreeing vanishing point',
+      () {
+    final filter = LineFilter();
+    final lineDetection = pb.LineDetection.fromBuffer(
+        File('test/data/line_detection_qu_2023121012_1420.pb')
+            .readAsBytesSync());
+    filter.process(lineDetection);
+    expect(filter.rightBottomX, greaterThan(640));
+  });
 }

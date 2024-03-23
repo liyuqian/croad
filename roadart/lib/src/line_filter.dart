@@ -123,13 +123,13 @@ class LineFilter {
       if (_rightConditions.accepts(line)) {
         _rightLines.add(line);
         final double bottomX = line.x(detection.height);
-        _minBottomX ??= bottomX;
-        _minBottomX = min(_minBottomX!, bottomX);
+        _rightBottomX ??= bottomX;
+        _rightBottomX = min(_rightBottomX!, bottomX);
       } else if (_leftConditions.accepts(line)) {
         _leftLines.add(line);
         final double bottomX = line.x(detection.height);
-        _maxBottomX ??= bottomX;
-        _maxBottomX = max(_maxBottomX!, bottomX);
+        _leftBottomX ??= bottomX;
+        _leftBottomX = max(_leftBottomX!, bottomX);
       }
     }
 
@@ -180,12 +180,15 @@ class LineFilter {
   List<Line> get leftLines => _leftLines;
   List<Line> get rightLines => _rightLines;
 
-  /// The minimum x value for filtered lines at the bottom of the image. Only
-  /// valid after calling [process].
-  double? get rightBottomX => _minBottomX;
-  double? _minBottomX;
-  double? get leftBottomX => _maxBottomX;
-  double? _maxBottomX;
+  /// The minimum x value for filtered right lines at the bottom of the image.
+  /// Only valid after calling [process].
+  double? get rightBottomX => _rightBottomX;
+  double? _rightBottomX;
+
+  /// The maximum x value for filtered right lines at the bottom of the image.
+  /// Only valid after calling [process].
+  double? get leftBottomX => _leftBottomX;
+  double? _leftBottomX;
 
   double _median(List<_WeightedDouble> list) {
     list.sort();
