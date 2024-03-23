@@ -182,9 +182,9 @@ class LineFilter {
 
   /// The minimum x value for filtered lines at the bottom of the image. Only
   /// valid after calling [process].
-  double? get minBottomX => _minBottomX;
+  double? get rightBottomX => _minBottomX;
   double? _minBottomX;
-  double? get maxBottomX => _maxBottomX;
+  double? get leftBottomX => _maxBottomX;
   double? _maxBottomX;
 
   double _median(List<_WeightedDouble> list) {

@@ -5,6 +5,7 @@ import 'package:grpc/grpc.dart';
 import 'package:roadart/proto/label.pbgrpc.dart' as pb;
 import 'package:roadart/src/line_filter.dart';
 import 'package:path/path.dart' as p;
+import 'package:vector_math/vector_math_64.dart';
 
 class Labeler {
   Labeler() {
@@ -50,21 +51,21 @@ class Labeler {
     final filter = LineFilter();
     filter.process(detection);
     print('#R=${filter.rightLines.length}, #L=${filter.leftLines.length}');
-    print('Min bottom x: ${filter.minBottomX}');
-    print('Max bottom x: ${filter.minBottomX}');
+    print('Right bottom x: ${filter.rightBottomX}');
+    print('Left bottom x: ${filter.leftBottomX}');
     print('Processed in ${stopwatch.elapsedMilliseconds}ms');
 
     stopwatch.reset();
-    await _client.plot(pb.PlotRequest(
-        lines: filter.rightLines.map((l) => l.pbLine), lineColor: 'yellow'));
-    await _client.plot(pb.PlotRequest(
-        lines: filter.leftLines.map((l) => l.pbLine), lineColor: 'green'));
     await _client.plot(pb.PlotRequest(
       points: filter.intersections.map((v) => vec2Proto(v)),
       pointColor: 'blue',
       lines: _computeBoundaries(filter, detection),
       lineColor: 'blue',
     ));
+    await _client.plot(pb.PlotRequest(
+        lines: filter.rightLines.map((l) => l.pbLine), lineColor: 'yellow'));
+    await _client.plot(pb.PlotRequest(
+        lines: filter.leftLines.map((l) => l.pbLine), lineColor: 'green'));
     if (filter.guessedPoint != null) {
       print('Guessed point: ${filter.guessedPoint}');
       await _client.plot(pb.PlotRequest(
@@ -80,21 +81,22 @@ class Labeler {
       LineFilter filter, pb.LineDetection detection) {
     final List<pb.Line> boundaries = [];
     if (filter.guessedPoint == null) return boundaries;
-    if (filter.minBottomX != null) {
-      boundaries.add(pb.Line(
-        x0: filter.guessedPoint!.x,
-        y0: filter.guessedPoint!.y,
-        x1: filter.minBottomX!,
-        y1: detection.height.toDouble(),
-      ));
+    final Vector2 c = filter.guessedPoint!;
+    if (filter.leftBottomX != null) {
+      final l = Vector2(filter.leftBottomX!, detection.height.toDouble());
+      if (l.x < 0) {
+        l.y = c.y - (l.y - c.y) / (l.x - c.x) * c.x;
+        l.x = 0;
+      }
+      boundaries.add(pb.Line(x0: c.x, y0: c.y, x1: l.x, y1: l.y));
     }
-    if (filter.maxBottomX != null) {
-      boundaries.add(pb.Line(
-        x0: filter.guessedPoint!.x,
-        y0: filter.guessedPoint!.y,
-        x1: filter.maxBottomX!,
-        y1: detection.height.toDouble(),
-      ));
+    if (filter.rightBottomX != null) {
+      final r = Vector2(filter.rightBottomX!, detection.height.toDouble());
+      if (r.x > detection.width) {
+        r.y = c.y + (r.y - c.y) / (r.x - c.x) * (detection.width - c.x);
+        r.x = detection.width.toDouble();
+      }
+      boundaries.add(pb.Line(x0: c.x, y0: c.y, x1: r.x, y1: r.y));
     }
     return boundaries;
   }

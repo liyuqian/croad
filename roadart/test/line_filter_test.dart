@@ -11,7 +11,7 @@ void main() {
         File('test/data/line_detection_2023121012_11001.pb').readAsBytesSync());
     filter.process(lineDetection);
     expect(filter.rightLines.length, 8);
-    expect(filter.minBottomX, closeTo(840.94, 0.01));
+    expect(filter.rightBottomX, closeTo(840.94, 0.01));
   });
 
   test('LineFilter ignores horizontal lines', () {
