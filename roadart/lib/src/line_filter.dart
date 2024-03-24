@@ -122,14 +122,8 @@ class LineFilter {
       final line = Line(pbLine, detection);
       if (_rightConditions.accepts(line)) {
         _rightLines.add(line);
-        final double bottomX = line.x(detection.height);
-        _rightBottomX ??= bottomX;
-        _rightBottomX = min(_rightBottomX!, bottomX);
       } else if (_leftConditions.accepts(line)) {
         _leftLines.add(line);
-        final double bottomX = line.x(detection.height);
-        _leftBottomX ??= bottomX;
-        _leftBottomX = max(_leftBottomX!, bottomX);
       }
     }
 
@@ -153,6 +147,8 @@ class LineFilter {
       _medianPoint = Vector2(_median(_weightedX), _median(_weightedY));
       _guess(detection);
     }
+
+    _computeBottomX(detection);
   }
 
   void _guess(pb.LineDetection detection) {
@@ -169,6 +165,28 @@ class LineFilter {
     }
     if (neighborWeight < kMinGuessNeighborWeightSumRatio) return;
     _guessedPoint = _medianPoint;
+  }
+
+  void _computeBottomX(pb.LineDetection detection) {
+    for (final line in rightLines) {
+      if (_lineDisagreesWithGuess(line, detection.width)) continue;
+      final double bottomX = line.x(detection.height);
+      _rightBottomX ??= bottomX;
+      _rightBottomX = min(_rightBottomX!, bottomX);
+    }
+    for (final line in leftLines) {
+      if (_lineDisagreesWithGuess(line, detection.width)) continue;
+      final double bottomX = line.x(detection.height);
+      _leftBottomX ??= bottomX;
+      _leftBottomX = max(_leftBottomX!, bottomX);
+    }
+  }
+
+  bool _lineDisagreesWithGuess(Line line, int width) {
+    const kMaxRelativeDistanceX = 0.03; // 3%
+    if (_guessedPoint == null) return false;
+    final double x = line.x(_guessedPoint!.y);
+    return (x - _guessedPoint!.x).abs() > kMaxRelativeDistanceX * width;
   }
 
   /// Guessed vanishing point where the (straight) road points to.
