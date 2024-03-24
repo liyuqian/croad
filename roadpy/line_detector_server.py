@@ -1,4 +1,5 @@
 from concurrent import futures
+import sys
 import traceback
 
 import cv2
@@ -122,6 +123,7 @@ def serve():
     server.add_insecure_port("unix:///tmp/line_detection.sock")
     server.start()
     print("Server started")
+    sys.stdout.flush()
     server.wait_for_termination()
 
 

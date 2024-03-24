@@ -7,8 +7,18 @@ import 'package:roadart/src/line_filter.dart';
 import 'package:path/path.dart' as p;
 import 'package:vector_math/vector_math_64.dart';
 
+Future<void> main(List<String> arguments) async {
+  if (arguments.length == 1) {
+    await listenKeyForImage(arguments[0]);
+  } else {
+    await listenKeyForVideo(arguments[0], int.parse(arguments[1]));
+  }
+}
+
+/// Must call [start] first, and [shutdown] at the end.
 class Labeler {
-  Labeler() {
+  Future<void> start() async {
+    await _startServer();
     final udsAddress = InternetAddress('/tmp/line_detection.sock',
         type: InternetAddressType.unix);
     _channel = ClientChannel(
@@ -18,7 +28,33 @@ class Labeler {
     _client = pb.LineDetectorClient(_channel);
   }
 
-  Future<void> shutdown() async => await _channel.shutdown();
+  Future<void> _startServer() async {
+    final String binPath = p.dirname(Platform.script.path);
+    final String root = Directory(binPath).parent.parent.path;
+    final String roadpy = p.join(root, 'roadpy');
+    _serverProcess = await Process.start(
+        'environment/bin/python', ['line_detector_server.py'],
+        workingDirectory: roadpy);
+    const String kServerOutPath = '/tmp/line_detector_server.out';
+    const String kServerErrPath = '/tmp/line_detector_server.err';
+    _serverOut = File(kServerOutPath).openWrite();
+    _serverErr = File(kServerErrPath).openWrite();
+    _serverProcess!.stdout.pipe(_serverOut!);
+    _serverProcess!.stderr.pipe(_serverErr!);
+    print('Waiting for server to start...');
+    while (!File(kServerOutPath).readAsStringSync().contains('started')) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    print('Server started, logs: $kServerOutPath, $kServerErrPath');
+  }
+
+  Future<void> shutdown() async {
+    await _channel.shutdown();
+    _serverProcess!.kill();
+    await _serverProcess!.exitCode;
+    await _serverOut!.close();
+    await _serverErr!.close();
+  }
 
   Future<void> labelVideo(String videoPath, int frameIndex) async {
     await _handleRequest(
@@ -101,12 +137,15 @@ class Labeler {
     return boundaries;
   }
 
+  IOSink? _serverOut, _serverErr;
+  Process? _serverProcess;
   late ClientChannel _channel;
   late pb.LineDetectorClient _client;
 }
 
 Future<void> listenKeyForVideo(String videoPath, int frameIndex) async {
   final labeler = Labeler();
+  await labeler.start();
   await labeler.labelVideo(videoPath, frameIndex);
   stdin.echoMode = false;
   stdin.lineMode = false;
@@ -138,6 +177,7 @@ Future<void> listenKeyForVideo(String videoPath, int frameIndex) async {
 
 Future<void> listenKeyForImage(String imageDirOrFile) async {
   final labeler = Labeler();
+  await labeler.start();
   late String imageDir;
   late String imageFile;
   if (!FileSystemEntity.isDirectorySync(imageDirOrFile)) {
@@ -194,12 +234,4 @@ Future<void> listenKeyForImage(String imageDirOrFile) async {
       print('Unknown key: $key');
     }
   });
-}
-
-Future<void> main(List<String> arguments) async {
-  if (arguments.length == 1) {
-    await listenKeyForImage(arguments[0]);
-  } else {
-    await listenKeyForVideo(arguments[0], int.parse(arguments[1]));
-  }
 }
