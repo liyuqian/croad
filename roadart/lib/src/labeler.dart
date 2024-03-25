@@ -55,8 +55,8 @@ class Labeler {
         pb.LineRequest(videoPath: videoPath, frameIndex: frameIndex));
   }
 
-  Future<void> labelImage(String imagePath) async {
-    await _handleRequest(pb.LineRequest(imagePath: imagePath, colorMappings: [
+  Future<void> labelCommaMask(String maskPath) async {
+    await _handleRequest(pb.LineRequest(imagePath: maskPath, colorMappings: [
       // comma10k my car to road
       pb.ColorMapping(fromHex: '#cc00ff', toHex: '#402020'),
       // comma10k movable to road
@@ -66,7 +66,10 @@ class Labeler {
     ]));
   }
 
-  Future<void> _handleRequest(pb.LineRequest request) async {
+  Future<void> _handleRequest(
+    pb.LineRequest request, {
+    bool plot = true,
+  }) async {
     final stopwatch = Stopwatch()..start();
     print('Sending request...');
     final pb.LineDetection detection = await _client.detectLines(request);
@@ -85,7 +88,13 @@ class Labeler {
     print('Left bottom x: ${filter.leftBottomX}');
     print('Processed in ${stopwatch.elapsedMilliseconds}ms');
 
-    stopwatch.reset();
+    if (plot) {
+      await _plot(detection, filter);
+    }
+  }
+
+  Future<void> _plot(pb.LineDetection detection, LineFilter filter) async {
+    final stopwatch = Stopwatch()..start();
     await _client.plot(pb.PlotRequest(
       points: filter.intersections.map((v) => vec2Proto(v)),
       pointColor: 'blue',
