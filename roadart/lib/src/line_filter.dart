@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:roadart/proto/label.pb.dart' as pb;
+import 'package:roadart/proto/label.pbgrpc.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 const double kEpsilon = 1e-8;
@@ -113,6 +114,7 @@ class LineFilter {
   static const double kMinGuessNeighborWeightSumRatio = 0.04;
 
   void process(pb.LineDetection detection) {
+    _detection = detection;
     if (kSaveProto) {
       File(kSaveFile).writeAsBytesSync(detection.writeToBuffer());
       print('Saved proto to $kSaveFile');
@@ -208,6 +210,8 @@ class LineFilter {
   double? get leftBottomX => _leftBottomX;
   double? _leftBottomX;
 
+  LineDetection? get detection => _detection;
+
   double _median(List<_WeightedDouble> list) {
     list.sort();
     final totalWeight = list.fold(0.0, (sum, w) => sum + w.weight);
@@ -243,6 +247,8 @@ class LineFilter {
 
   Vector2? _medianPoint;
   Vector2? _guessedPoint;
+
+  LineDetection? _detection;
 }
 
 class _WeightedDouble implements Comparable<_WeightedDouble> {

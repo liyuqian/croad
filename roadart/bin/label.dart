@@ -71,7 +71,7 @@ Future<void> listenKeyForImage(String imageDirOrFile) async {
       break;
     }
   }
-  await labeler.labelCommaMask(images[index]);
+  await labeler.labelImage(images[index]);
   stdin.echoMode = false;
   stdin.lineMode = false;
   Future<void> update(int delta) async {
@@ -89,7 +89,7 @@ Future<void> listenKeyForImage(String imageDirOrFile) async {
     if (images[index].contains('masks')) {
       print('original: ${images[index].replaceAll('masks', 'imgs')}');
     }
-    await labeler.labelCommaMask(images[index]);
+    await labeler.labelImage(images[index]);
   }
 
   late StreamSubscription sub;

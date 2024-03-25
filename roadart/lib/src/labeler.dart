@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:grpc/grpc.dart';
 import 'package:path/path.dart' as p;
@@ -17,7 +19,7 @@ class LabelResult with _$LabelResult {
     required String imagePath,
     required double xRatio, // vashing (road direction) at x = xRatio * width
     required double yRatio, // vashing (road direction) at y = yRatio * height
-    required double leftRatio, // -leftRatio * (pi / 2) from vertical
+    required double leftRatio, // leftRatio * (pi / 2) from vertical
     required double rightRatio, // rightRatio * (pi / 2) from vertical
   }) = _LabelResult;
 
@@ -73,18 +75,53 @@ class Labeler {
         pb.LineRequest(videoPath: videoPath, frameIndex: frameIndex));
   }
 
-  Future<void> labelCommaMask(String maskPath) async {
-    await _handleRequest(pb.LineRequest(imagePath: maskPath, colorMappings: [
-      // comma10k my car to road
-      pb.ColorMapping(fromHex: '#cc00ff', toHex: '#402020'),
-      // comma10k movable to road
-      pb.ColorMapping(fromHex: '#00ff66', toHex: '#402020'),
-      // comma10k movable_in_my_car to road
-      pb.ColorMapping(fromHex: '#00ccff', toHex: '#402020'),
-    ]));
+  Future<void> labelImage(String imagePath) async {
+    if (imagePath.contains('comma10k/masks')) {
+      await labelCommaMask(imagePath);
+    } else if (imagePath.contains('comma10k/imgs')) {
+      await labelCommaImage(imagePath);
+    } else {
+      throw Exception('Unsupported image path: $imagePath');
+    }
   }
 
-  Future<void> _handleRequest(
+  Future<void> labelCommaImage(String imagePath) async {
+    final String maskPath = imagePath.replaceAll('imgs', 'masks');
+    final LineFilter processed = await labelCommaMask(maskPath, plot: false);
+    if (processed.guessedPoint == null) {
+      return;
+    }
+    final Vector2 c = processed.guessedPoint!;
+    final int h = processed.detection!.height;
+    final int w = processed.detection!.width;
+    final double leftAngle = atan((c.x - processed.leftBottomX!) / (h - c.y));
+    final double rightAngle = atan((processed.rightBottomX! - c.x) / (h - c.y));
+    final result = LabelResult(
+      imagePath: imagePath,
+      xRatio: c.x / w,
+      yRatio: c.y / h,
+      leftRatio: leftAngle / (pi / 2),
+      rightRatio: rightAngle / (pi / 2),
+    );
+    final jsonStr = JsonEncoder.withIndent('  ').convert(result.toJson());
+    print('Label result: $jsonStr\n');
+  }
+
+  Future<LineFilter> labelCommaMask(String maskPath, {bool plot = true}) async {
+    return await _handleRequest(
+      pb.LineRequest(imagePath: maskPath, colorMappings: [
+        // comma10k my car to road
+        pb.ColorMapping(fromHex: '#cc00ff', toHex: '#402020'),
+        // comma10k movable to road
+        pb.ColorMapping(fromHex: '#00ff66', toHex: '#402020'),
+        // comma10k movable_in_my_car to road
+        pb.ColorMapping(fromHex: '#00ccff', toHex: '#402020'),
+      ]),
+      plot: plot,
+    );
+  }
+
+  Future<LineFilter> _handleRequest(
     pb.LineRequest request, {
     bool plot = true,
   }) async {
@@ -109,6 +146,8 @@ class Labeler {
     if (plot) {
       await _plot(detection, filter);
     }
+
+    return filter;
   }
 
   Future<void> _plot(pb.LineDetection detection, LineFilter filter) async {
