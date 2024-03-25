@@ -7,6 +7,7 @@ environment:
   sdk: ^3.2.6
 
 dependencies:
+  args: ^2.4.2
   freezed_annotation: ^2.4.1
   glob: ^2.1.2
   grpc: ^3.2.4

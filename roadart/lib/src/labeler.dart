@@ -29,6 +29,9 @@ class LabelResult with _$LabelResult {
 
 /// Must call [start] first, and [shutdown] at the end.
 class Labeler {
+  Labeler({IOSink? out}) : _out = out ?? stdout;
+  final IOSink _out;
+
   Future<void> start() async {
     final int serverPid = await _startServer();
     final udsAddress = InternetAddress('/tmp/line_detection_$serverPid.sock',
@@ -48,17 +51,18 @@ class Labeler {
     _serverProcess = await Process.start(
         'environment/bin/python', ['line_detector_server.py'],
         workingDirectory: roadpy);
-    const String kServerOutPath = '/tmp/line_detector_server.out';
-    const String kServerErrPath = '/tmp/line_detector_server.err';
-    _serverOut = File(kServerOutPath).openWrite();
-    _serverErr = File(kServerErrPath).openWrite();
+    final String prefix = '/tmp/line_detector_server_${_serverProcess!.pid}';
+    final String outPath = '$prefix.out';
+    final String errPath = '$prefix.err';
+    _serverOut = File(outPath).openWrite();
+    _serverErr = File(errPath).openWrite();
     _serverProcess!.stdout.pipe(_serverOut!);
     _serverProcess!.stderr.pipe(_serverErr!);
-    print('Waiting for server to start...');
-    while (!File(kServerOutPath).readAsStringSync().contains('started')) {
+    _out.writeln('Waiting for server to start...');
+    while (!File(outPath).readAsStringSync().contains('started')) {
       await Future.delayed(const Duration(milliseconds: 100));
     }
-    print('Server started, logs: $kServerOutPath, $kServerErrPath');
+    _out.writeln('Server started, logs: $outPath, $errPath');
     return _serverProcess!.pid;
   }
 
@@ -76,6 +80,7 @@ class Labeler {
   }
 
   Future<void> labelImage(String imagePath) async {
+    _out.writeln('Labeling image: $imagePath');
     if (imagePath.contains('comma10k/masks')) {
       await labelCommaMask(imagePath);
     } else if (imagePath.contains('comma10k/imgs')) {
@@ -83,13 +88,16 @@ class Labeler {
     } else {
       throw Exception('Unsupported image path: $imagePath');
     }
+    _out.writeln('');
   }
 
-  Future<void> labelCommaImage(String imagePath) async {
+  Future<LabelResult?> labelCommaImage(String imagePath) async {
     final String maskPath = imagePath.replaceAll('imgs', 'masks');
     final LineFilter processed = await labelCommaMask(maskPath, plot: false);
-    if (processed.guessedPoint == null) {
-      return;
+    if (processed.guessedPoint == null ||
+        processed.leftBottomX == null ||
+        processed.rightBottomX == null) {
+      return null;
     }
     final Vector2 c = processed.guessedPoint!;
     final int h = processed.detection!.height;
@@ -104,7 +112,8 @@ class Labeler {
       rightRatio: rightAngle / (pi / 2),
     );
     final jsonStr = JsonEncoder.withIndent('  ').convert(result.toJson());
-    print('Label result: $jsonStr\n');
+    _out.writeln('Label result: $jsonStr\n');
+    return result;
   }
 
   Future<LineFilter> labelCommaMask(String maskPath, {bool plot = true}) async {
@@ -126,22 +135,23 @@ class Labeler {
     bool plot = true,
   }) async {
     final stopwatch = Stopwatch()..start();
-    print('Sending request...');
+    _out.writeln('Sending request...');
     final pb.LineDetection detection = await _client.detectLines(request);
     final String size = '${detection.width}x${detection.height}';
     const kDetectionProtoDump = '/tmp/line_detection.pb';
     File(kDetectionProtoDump).writeAsBytesSync(detection.writeToBuffer());
-    print('Detection: ${detection.lines.length} lines detected ($size)');
-    print('Received detection in ${stopwatch.elapsedMilliseconds}ms');
-    print('Detection proto saved to $kDetectionProtoDump');
+    _out.writeln('Detection: ${detection.lines.length} lines detected ($size)');
+    _out.writeln('Received detection in ${stopwatch.elapsedMilliseconds}ms');
+    _out.writeln('Detection proto saved to $kDetectionProtoDump');
 
     stopwatch.reset();
     final filter = LineFilter();
     filter.process(detection);
-    print('#R=${filter.rightLines.length}, #L=${filter.leftLines.length}');
-    print('Right bottom x: ${filter.rightBottomX}');
-    print('Left bottom x: ${filter.leftBottomX}');
-    print('Processed in ${stopwatch.elapsedMilliseconds}ms');
+    _out.writeln(
+        '#R=${filter.rightLines.length}, #L=${filter.leftLines.length}');
+    _out.writeln('Right bottom x: ${filter.rightBottomX}');
+    _out.writeln('Left bottom x: ${filter.leftBottomX}');
+    _out.writeln('Processed in ${stopwatch.elapsedMilliseconds}ms');
 
     if (plot) {
       await _plot(detection, filter);
@@ -163,14 +173,14 @@ class Labeler {
     await _client.plot(pb.PlotRequest(
         lines: filter.leftLines.map((l) => l.pbLine), lineColor: 'green'));
     if (filter.guessedPoint != null) {
-      print('Guessed point: ${filter.guessedPoint}');
+      _out.writeln('Guessed point: ${filter.guessedPoint}');
       await _client.plot(pb.PlotRequest(
         points: [vec2Proto(filter.guessedPoint!)],
         pointColor: 'red',
       ));
     }
     await _client.exportPng(pb.Empty());
-    print('Plotted in ${stopwatch.elapsedMilliseconds}ms\n');
+    _out.writeln('Plotted in ${stopwatch.elapsedMilliseconds}ms\n');
   }
 
   List<pb.Line> _computeBoundaries(

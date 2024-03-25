@@ -1,18 +1,81 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:args/args.dart';
 import 'package:glob/glob.dart';
 import 'package:glob/list_local_fs.dart';
 import 'package:path/path.dart' as p;
 import 'package:roadart/src/labeler.dart';
 
+const String kImageArg = 'image';
+const String kVideoArg = 'video';
+const String kFrameArg = 'frame';
+const String kConcurrencyArg = 'concurrency';
+const String kMaxTaskArg = 'max-task';
+
+const int kMinImageSize = 5000; // Ignore images smaller than 5KB
+
 Future<void> main(List<String> arguments) async {
-  Glob('/tmp/line_detection*.sock').listSync().forEach((f) => f.delete());
-  if (arguments.length == 1) {
-    await listenKeyForImage(arguments[0]);
-  } else {
-    await listenKeyForVideo(arguments[0], int.parse(arguments[1]));
+  Glob('/tmp/line_detection*.sock').listSync().forEach((f) => f.deleteSync());
+  Glob('/tmp/line_detect*.out').listSync().forEach((f) => f.deleteSync());
+  Glob('/tmp/line_detect*.err').listSync().forEach((f) => f.deleteSync());
+
+  final parser = ArgParser()
+    ..addOption(kImageArg, help: 'Image file or directory')
+    ..addOption(kVideoArg, help: 'Video file')
+    ..addOption(kFrameArg, help: 'Frame index', defaultsTo: '0')
+    ..addOption(kConcurrencyArg,
+        help: 'Number of concurrent labelers', defaultsTo: '1')
+    ..addOption(kMaxTaskArg, help: 'max tasks per worker (for debugging)');
+  final argResults = parser.parse(arguments);
+
+  if (argResults[kConcurrencyArg] == '1') {
+    if (argResults[kImageArg] != null) {
+      await listenKeyForImage(argResults[kImageArg]!);
+    } else if (argResults[kVideoArg] != null) {
+      await listenKeyForVideo(
+          argResults[kVideoArg]!, int.parse(argResults[kFrameArg]!));
+    } else {
+      print(parser.usage);
+    }
+    return;
   }
+
+  final concurrency = int.parse(argResults[kConcurrencyArg]!);
+  if (argResults[kImageArg] == null) {
+    throw Exception('An image directory is required for concurrent labeling.');
+  }
+
+  final List<FileSystemEntity> files =
+      Directory(argResults[kImageArg]!).listSync();
+  final List<Future> workerCompletions = [];
+  for (int i = 0; i < concurrency; ++i) {
+    workerCompletions
+        .add(labelFilesByOneWorker(files, i, argResults[kMaxTaskArg]));
+  }
+  await Future.wait(workerCompletions);
+}
+
+Future<void> labelFilesByOneWorker(
+    List<FileSystemEntity> files, int workerIndex, String? maxTaskArg) async {
+  int? maxTask = maxTaskArg == null ? null : int.parse(maxTaskArg);
+  final String outPath = '/tmp/label_worker_$workerIndex.out';
+  final IOSink out = File(outPath).openWrite();
+  final labeler = Labeler(out: out);
+  await labeler.start();
+  print('Worker $workerIndex started (out=$outPath)');
+  int count = 0;
+  while (files.isNotEmpty) {
+    final file = files.removeLast();
+    final maskFile = File(file.path.replaceAll('imgs', 'masks'));
+    if (file is File && maskFile.lengthSync() >= kMinImageSize) {
+      if (maxTask != null && ++count > maxTask) break;
+      print('Worker $workerIndex labels ${file.path}');
+      await labeler.labelImage(file.path);
+    }
+  }
+  await labeler.shutdown();
+  await out.close();
 }
 
 Future<void> listenKeyForVideo(String videoPath, int frameIndex) async {
@@ -80,8 +143,7 @@ Future<void> listenKeyForImage(String imageDirOrFile) async {
       if (index < 0) {
         index = images.length - 1;
       }
-      const int kMinSize = 5000; // Ignore images smaller than 5KB
-      if (File(images[index]).lengthSync() >= kMinSize) {
+      if (File(images[index]).lengthSync() >= kMinImageSize) {
         break;
       }
     }
