@@ -4,8 +4,26 @@ import 'package:grpc/grpc.dart';
 import 'package:path/path.dart' as p;
 import 'package:roadart/proto/label.pbgrpc.dart' as pb;
 import 'package:vector_math/vector_math_64.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'line_filter.dart';
+
+part 'labeler.freezed.dart';
+part 'labeler.g.dart';
+
+@freezed
+class LabelResult with _$LabelResult {
+  const factory LabelResult({
+    required String imagePath,
+    required double xRatio, // vashing (road direction) at x = xRatio * width
+    required double yRatio, // vashing (road direction) at y = yRatio * height
+    required double leftRatio, // -leftRatio * (pi / 2) from vertical
+    required double rightRatio, // rightRatio * (pi / 2) from vertical
+  }) = _LabelResult;
+
+  factory LabelResult.fromJson(Map<String, Object?> json) =>
+      _$LabelResultFromJson(json);
+}
 
 /// Must call [start] first, and [shutdown] at the end.
 class Labeler {
