@@ -1,5 +1,6 @@
 from concurrent import futures
 import sys
+import os
 import traceback
 
 import cv2
@@ -118,11 +119,12 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
 
 
 def serve():
+    pid = os.getpid()
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     label_pb2_grpc.add_LineDetectorServicer_to_server(LineDetector(), server)
-    server.add_insecure_port("unix:///tmp/line_detection.sock")
+    server.add_insecure_port(f"unix:///tmp/line_detection_{pid}.sock")
     server.start()
-    print("Server started")
+    print(f"Server started with pid {pid}")
     sys.stdout.flush()
     server.wait_for_termination()
 

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:glob/glob.dart';
+import 'package:glob/list_local_fs.dart';
 import 'package:grpc/grpc.dart';
 import 'package:roadart/proto/label.pbgrpc.dart' as pb;
 import 'package:roadart/src/line_filter.dart';
@@ -8,6 +10,7 @@ import 'package:path/path.dart' as p;
 import 'package:vector_math/vector_math_64.dart';
 
 Future<void> main(List<String> arguments) async {
+  Glob('/tmp/line_detection*.sock').listSync().forEach((f) => f.delete());
   if (arguments.length == 1) {
     await listenKeyForImage(arguments[0]);
   } else {
@@ -18,8 +21,8 @@ Future<void> main(List<String> arguments) async {
 /// Must call [start] first, and [shutdown] at the end.
 class Labeler {
   Future<void> start() async {
-    await _startServer();
-    final udsAddress = InternetAddress('/tmp/line_detection.sock',
+    final int serverPid = await _startServer();
+    final udsAddress = InternetAddress('/tmp/line_detection_$serverPid.sock',
         type: InternetAddressType.unix);
     _channel = ClientChannel(
       udsAddress,
@@ -28,7 +31,8 @@ class Labeler {
     _client = pb.LineDetectorClient(_channel);
   }
 
-  Future<void> _startServer() async {
+  // Returns server's pid
+  Future<int> _startServer() async {
     final String binPath = p.dirname(Platform.script.path);
     final String root = Directory(binPath).parent.parent.path;
     final String roadpy = p.join(root, 'roadpy');
@@ -46,6 +50,7 @@ class Labeler {
       await Future.delayed(const Duration(milliseconds: 100));
     }
     print('Server started, logs: $kServerOutPath, $kServerErrPath');
+    return _serverProcess!.pid;
   }
 
   Future<void> shutdown() async {
