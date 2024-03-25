@@ -59,7 +59,8 @@ class Labeler {
     _serverProcess!.stdout.pipe(_serverOut!);
     _serverProcess!.stderr.pipe(_serverErr!);
     _out.writeln('Waiting for server to start...');
-    while (!File(outPath).readAsStringSync().contains('started')) {
+    while (!File(outPath).existsSync() ||
+        !File(outPath).readAsStringSync().contains('started')) {
       await Future.delayed(const Duration(milliseconds: 100));
     }
     _out.writeln('Server started, logs: $outPath, $errPath');
