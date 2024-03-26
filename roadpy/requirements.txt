@@ -1,5 +1,14 @@
 grpcio==1.62.1
 grpcio-tools==1.62.1
+kaleido==0.2.1
 numpy==1.26.4
 opencv-python==4.9.0.80
+packaging==24.0
+pandas==2.2.1
+plotly==5.20.0
 protobuf==4.25.3
+python-dateutil==2.9.0.post0
+pytz==2024.1
+six==1.16.0
+tenacity==8.2.3
+tzdata==2024.1

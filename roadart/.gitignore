@@ -2,3 +2,7 @@
 # Created by `dart pub`
 .dart_tool/
 *.dill
+*.pb.dart
+*.pbenum.dart
+*.pbgrpc.dart
+*.pbjson.dart

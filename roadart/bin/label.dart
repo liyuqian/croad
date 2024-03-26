@@ -5,6 +5,7 @@ import 'package:args/args.dart';
 import 'package:glob/glob.dart';
 import 'package:glob/list_local_fs.dart';
 import 'package:path/path.dart' as p;
+import 'package:roadart/src/label_set.dart';
 import 'package:roadart/src/labeler.dart';
 
 const String kImageArg = 'image';
@@ -12,8 +13,7 @@ const String kVideoArg = 'video';
 const String kFrameArg = 'frame';
 const String kConcurrencyArg = 'concurrency';
 const String kMaxTaskArg = 'max-task';
-
-const int kMinImageSize = 5000; // Ignore images smaller than 5KB
+const String kResultArg = 'result';
 
 Future<void> main(List<String> arguments) async {
   Glob('/tmp/line_detection*.sock').listSync().forEach((f) => f.deleteSync());
@@ -26,7 +26,8 @@ Future<void> main(List<String> arguments) async {
     ..addOption(kFrameArg, help: 'Frame index', defaultsTo: '0')
     ..addOption(kConcurrencyArg,
         help: 'Number of concurrent labelers', defaultsTo: '1')
-    ..addOption(kMaxTaskArg, help: 'max tasks per worker (for debugging)');
+    ..addOption(kMaxTaskArg, help: 'max tasks per worker (for debugging)')
+    ..addOption(kResultArg, help: 'Output json file for results');
   final argResults = parser.parse(arguments);
 
   if (argResults[kConcurrencyArg] == '1') {
@@ -49,11 +50,16 @@ Future<void> main(List<String> arguments) async {
   final List<FileSystemEntity> files =
       Directory(argResults[kImageArg]!).listSync();
   final List<Future> workerCompletions = [];
+  final labelSet = LabelSet(argResults[kResultArg]!);
+  final int? maxTask = argResults[kMaxTaskArg] == null
+      ? null
+      : int.parse(argResults[kMaxTaskArg]!);
   for (int i = 0; i < concurrency; ++i) {
     workerCompletions
-        .add(labelFilesByOneWorker(files, i, argResults[kMaxTaskArg]));
+        .add(LabelSetWorker(files, i, labelSet, maxTask: maxTask).work());
   }
   await Future.wait(workerCompletions);
+  labelSet.save();
 }
 
 Future<void> labelFilesByOneWorker(

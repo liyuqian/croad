@@ -13,6 +13,8 @@ import 'line_filter.dart';
 part 'labeler.freezed.dart';
 part 'labeler.g.dart';
 
+const int kMinImageSize = 5000; // Ignore images smaller than 5KB
+
 @freezed
 class LabelResult with _$LabelResult {
   const factory LabelResult({
@@ -80,16 +82,18 @@ class Labeler {
         pb.LineRequest(videoPath: videoPath, frameIndex: frameIndex));
   }
 
-  Future<void> labelImage(String imagePath) async {
+  Future<LabelResult?> labelImage(String imagePath) async {
+    LabelResult? result;
     _out.writeln('Labeling image: $imagePath');
     if (imagePath.contains('comma10k/masks')) {
       await labelCommaMask(imagePath);
     } else if (imagePath.contains('comma10k/imgs')) {
-      await labelCommaImage(imagePath);
+      result = await labelCommaImage(imagePath);
     } else {
       throw Exception('Unsupported image path: $imagePath');
     }
     _out.writeln('');
+    return result;
   }
 
   Future<LabelResult?> labelCommaImage(String imagePath) async {
