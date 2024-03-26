@@ -62,28 +62,6 @@ Future<void> main(List<String> arguments) async {
   labelSet.save();
 }
 
-Future<void> labelFilesByOneWorker(
-    List<FileSystemEntity> files, int workerIndex, String? maxTaskArg) async {
-  int? maxTask = maxTaskArg == null ? null : int.parse(maxTaskArg);
-  final String outPath = '/tmp/label_worker_$workerIndex.out';
-  final IOSink out = File(outPath).openWrite();
-  final labeler = Labeler(out: out);
-  await labeler.start();
-  print('Worker $workerIndex started (out=$outPath)');
-  int count = 0;
-  while (files.isNotEmpty) {
-    final file = files.removeLast();
-    final maskFile = File(file.path.replaceAll('imgs', 'masks'));
-    if (file is File && maskFile.lengthSync() >= kMinImageSize) {
-      if (maxTask != null && ++count > maxTask) break;
-      print('Worker $workerIndex labels ${file.path}');
-      await labeler.labelImage(file.path);
-    }
-  }
-  await labeler.shutdown();
-  await out.close();
-}
-
 Future<void> listenKeyForVideo(String videoPath, int frameIndex) async {
   final labeler = Labeler();
   await labeler.start();

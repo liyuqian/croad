@@ -25,7 +25,7 @@ class LabelSet {
     for (final entry in _imageToLabel.entries) {
       jsonMap[entry.key] = entry.value?.toJson();
     }
-    final String json = jsonEncode(jsonMap);
+    final String json = JsonEncoder.withIndent('  ').convert(jsonMap);
     File(jsonPath).writeAsStringSync(json);
   }
 
@@ -40,6 +40,10 @@ class LabelSet {
 /// comes from asynchronously calling multiple line detector servers. Most (more
 /// than 99%) time seems to be consumed by the server.
 class LabelSetWorker {
+  // Save the whole LabelSet for every kCountPerSave labelings. It's Ok to
+  // rewrite the whole json since a 50K dataset likely only has 50MB json.
+  static const int kCountPerSave = 100;
+
   LabelSetWorker(this.files, this.workerIndex, this.labelSet, {this.maxTask});
   final List<FileSystemEntity> files;
   final int workerIndex;
@@ -53,15 +57,23 @@ class LabelSetWorker {
     await labeler.start();
     print('Worker $workerIndex started (out=$outPath)');
     int count = 0;
+    final total = files.length;
     while (files.isNotEmpty) {
       final file = files.removeLast();
       if (labelSet.has(file.path)) continue;
       final maskFile = File(file.path.replaceAll('imgs', 'masks'));
       if (file is File && maskFile.lengthSync() >= kMinImageSize) {
-        if (maxTask != null && ++count > maxTask!) break;
-        print('Worker $workerIndex labels ${file.path}');
+        ++count;
+        if (maxTask != null && count > maxTask!) break;
+        print('Worker $workerIndex labels $count (${files.length}/$total left):'
+            ' ${file.path}');
         LabelResult? result = await labeler.labelImage(file.path);
         labelSet.add(file.path, result);
+        if (workerIndex == 0 && count % kCountPerSave == 0) {
+          print('Checkpoint saving...');
+          labelSet.save();
+          print('Checkpoint saved.');
+        }
       }
     }
     await labeler.shutdown();
