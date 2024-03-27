@@ -90,7 +90,7 @@ class Labeler {
     } else if (imagePath.contains('comma10k/imgs')) {
       result = await labelCommaImage(imagePath);
     } else {
-      throw Exception('Unsupported image path: $imagePath');
+      await labelGeneral(imagePath);
     }
     _out.writeln('');
     return result;
@@ -134,6 +134,9 @@ class Labeler {
       plot: plot,
     );
   }
+
+  Future<LineFilter> labelGeneral(String imagePath, {bool plot = true}) =>
+      _handleRequest(pb.LineRequest(imagePath: imagePath), plot: plot);
 
   Future<LineFilter> _handleRequest(
     pb.LineRequest request, {
