@@ -10,6 +10,5 @@ for raw_record in raw_dataset.take(100):
     label = example.features.feature["label"].float_list.value
     print(f"label={label}")
     image = tf.image.decode_png(image, channels=3)
-    image = tf.cast(image, tf.uint8)
     cv2.imshow("image", image.numpy())
     cv2.waitKey(0)
