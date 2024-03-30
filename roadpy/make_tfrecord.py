@@ -1,11 +1,9 @@
-import pdb
 import cv2
 import json
 import tensorflow as tf
 import threading
 
-TARGET_W = 640
-TARGET_H = 360
+from tfrecord_setting import TARGET_W, TARGET_H, TFRECORD_PATH, RESULT_JSON_PATH
 
 
 def get_resized(image_path: str, width: int, height: int):
@@ -34,10 +32,10 @@ def get_resized(image_path: str, width: int, height: int):
     return padded_image
 
 
-with open("../data/label_result.json") as f:
+with open(RESULT_JSON_PATH) as f:
     label_result = json.load(f)
 
-writer = tf.io.TFRecordWriter("../data/labeled.tfrecord")
+writer = tf.io.TFRecordWriter(TFRECORD_PATH)
 
 
 def process_label_result(label_result, start_index, end_index, thread_id: int):
