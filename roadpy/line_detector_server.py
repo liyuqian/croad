@@ -3,6 +3,11 @@ import sys
 import os
 import traceback
 
+from tfrecord_utils import bgr_to_input, draw_prediction
+
+os.environ["KERAS_BACKEND"] = "jax"
+import keras
+
 import cv2
 import grpc
 import numpy as np
@@ -19,7 +24,7 @@ PNG_PATH = "/tmp/line_detection.png"
 class LineDetector(label_pb2_grpc.LineDetectorServicer):
     def DetectLines(self, request: label_pb2.LineRequest, context):
         try:
-            print(f"Detecting {request.video_path} {request.frame_index}")
+            print(f"Detecting lines")
             return self._detect(request)
         except Exception as e:
             print(f"Error: {e}")
@@ -82,27 +87,35 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
             full = np.full(bgr.shape, to_color, dtype=np.uint8)
             new = cv2.bitwise_and(full, full, mask=mask)
             bgr = cv2.bitwise_or(rest, new)
-        return self._detectBgr(bgr)
+        return self._detectBgr(bgr, request.model_path)
 
     def _detectVideo(self, request: label_pb2.LineRequest):
         cap = cv2.VideoCapture(request.video_path)
         cap.set(cv2.CAP_PROP_POS_FRAMES, request.frame_index)
         ret, bgr = cap.read()
         cap.release()
-        return self._detectBgr(bgr)
+        return self._detectBgr(bgr, request.model_path)
 
-    def _detectBgr(self, bgr):
+    def _detectBgr(self, bgr, modelPath: str):
         rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-        gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
-        lines, _, _, _ = self._detector.detect(gray)
         detection = label_pb2.LineDetection(
             width=bgr.shape[1],
             height=bgr.shape[0],
         )
-        if lines is not None:
-            for line in lines:
-                x0, y0, x1, y1 = line[0]
-                detection.lines.append(label_pb2.Line(x0=x0, y0=y0, x1=x1, y1=y1))
+
+        if not modelPath:
+            gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+            lines, _, _, _ = self._detector.detect(gray)
+            if lines is not None:
+                for line in lines:
+                    x0, y0, x1, y1 = line[0]
+                    detection.lines.append(label_pb2.Line(x0=x0, y0=y0, x1=x1, y1=y1))
+        else:
+            if self._modelPath != modelPath:
+                self._modelPath = modelPath
+                self._model = keras.models.load_model(modelPath)
+            predicted_bgr = draw_prediction(self._model, bgr)
+            rgb = cv2.cvtColor(predicted_bgr, cv2.COLOR_BGR2RGB)
 
         self._fig = px.imshow(rgb)
 
@@ -116,6 +129,8 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
 
     _detector = cv2.createLineSegmentDetector()
     _fig: go.Figure = None
+    _modelPath: str = None
+    _model: keras.Model = None
 
 
 def serve():

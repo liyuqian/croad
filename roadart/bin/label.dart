@@ -14,6 +14,7 @@ const String kFrameArg = 'frame';
 const String kConcurrencyArg = 'concurrency';
 const String kMaxTaskArg = 'max-task';
 const String kResultArg = 'result';
+const String kModelArg = 'model';
 
 Future<void> main(List<String> arguments) async {
   Glob('/tmp/line_detection*.sock').listSync().forEach((f) => f.deleteSync());
@@ -27,15 +28,16 @@ Future<void> main(List<String> arguments) async {
     ..addOption(kConcurrencyArg,
         help: 'Number of concurrent labelers', defaultsTo: '1')
     ..addOption(kMaxTaskArg, help: 'max tasks per worker (for debugging)')
-    ..addOption(kResultArg, help: 'Output json file for results');
+    ..addOption(kResultArg, help: 'Output json file for results')
+    ..addOption(kModelArg, help: 'Keras model file for inference');
   final argResults = parser.parse(arguments);
 
   if (argResults[kConcurrencyArg] == '1') {
     if (argResults[kImageArg] != null) {
-      await listenKeyForImage(argResults[kImageArg]!);
+      await listenKeyForImage(argResults[kImageArg]!, argResults[kModelArg]);
     } else if (argResults[kVideoArg] != null) {
-      await listenKeyForVideo(
-          argResults[kVideoArg]!, int.parse(argResults[kFrameArg]!));
+      await listenKeyForVideo(argResults[kVideoArg]!,
+          int.parse(argResults[kFrameArg]!), argResults[kModelArg]);
     } else {
       print(parser.usage);
     }
@@ -62,15 +64,16 @@ Future<void> main(List<String> arguments) async {
   labelSet.save();
 }
 
-Future<void> listenKeyForVideo(String videoPath, int frameIndex) async {
+Future<void> listenKeyForVideo(
+    String videoPath, int frameIndex, String? modelPath) async {
   final labeler = Labeler();
   await labeler.start();
-  await labeler.labelVideo(videoPath, frameIndex);
+  await labeler.labelVideo(videoPath, frameIndex, modelPath);
   stdin.echoMode = false;
   stdin.lineMode = false;
   Future<void> update(int frameDelta) async {
     print('frame: ${frameIndex += frameDelta}');
-    await labeler.labelVideo(videoPath, frameIndex);
+    await labeler.labelVideo(videoPath, frameIndex, modelPath);
   }
 
   late StreamSubscription sub;
@@ -94,7 +97,7 @@ Future<void> listenKeyForVideo(String videoPath, int frameIndex) async {
   });
 }
 
-Future<void> listenKeyForImage(String imageDirOrFile) async {
+Future<void> listenKeyForImage(String imageDirOrFile, String? modelPath) async {
   final labeler = Labeler();
   await labeler.start();
   late String imageDir;
@@ -118,7 +121,7 @@ Future<void> listenKeyForImage(String imageDirOrFile) async {
       break;
     }
   }
-  await labeler.labelImage(images[index]);
+  await labeler.labelImage(images[index], modelPath);
   stdin.echoMode = false;
   stdin.lineMode = false;
   Future<void> update(int delta) async {
@@ -135,7 +138,7 @@ Future<void> listenKeyForImage(String imageDirOrFile) async {
     if (images[index].contains('masks')) {
       print('original: ${images[index].replaceAll('masks', 'imgs')}');
     }
-    await labeler.labelImage(images[index]);
+    await labeler.labelImage(images[index], modelPath);
   }
 
   late StreamSubscription sub;

@@ -67,7 +67,7 @@ class LabelSetWorker {
         if (maxTask != null && count > maxTask!) break;
         print('Worker $workerIndex labels $count (${files.length}/$total left):'
             ' ${file.path}');
-        LabelResult? result = await labeler.labelImage(file.path);
+        LabelResult? result = await labeler.labelImage(file.path, null);
         labelSet.add(file.path, result);
         if (workerIndex == 0 && count % kCountPerSave == 0) {
           print('Checkpoint saving...');

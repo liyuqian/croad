@@ -34,6 +34,9 @@ message LineRequest {
   string image_path = 3;
 
   repeated ColorMapping color_mappings = 4;
+
+  // If set, we'll use the keras model to predict lines.
+  string model_path = 5;
 }
 
 message PlotRequest {

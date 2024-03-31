@@ -77,12 +77,13 @@ class Labeler {
     await _serverErr!.close();
   }
 
-  Future<void> labelVideo(String videoPath, int frameIndex) async {
-    await _handleRequest(
-        pb.LineRequest(videoPath: videoPath, frameIndex: frameIndex));
+  Future<void> labelVideo(
+      String videoPath, int frameIndex, String? modelPath) async {
+    await _handleRequest(pb.LineRequest(
+        videoPath: videoPath, frameIndex: frameIndex, modelPath: modelPath));
   }
 
-  Future<LabelResult?> labelImage(String imagePath) async {
+  Future<LabelResult?> labelImage(String imagePath, String? modelPath) async {
     LabelResult? result;
     _out.writeln('Labeling image: $imagePath');
     if (imagePath.contains('comma10k/masks')) {
@@ -90,7 +91,7 @@ class Labeler {
     } else if (imagePath.contains('comma10k/imgs')) {
       result = await labelCommaImage(imagePath);
     } else {
-      await labelGeneral(imagePath);
+      await labelGeneral(imagePath, modelPath);
     }
     _out.writeln('');
     return result;
@@ -135,8 +136,15 @@ class Labeler {
     );
   }
 
-  Future<LineFilter> labelGeneral(String imagePath, {bool plot = true}) =>
-      _handleRequest(pb.LineRequest(imagePath: imagePath), plot: plot);
+  Future<LineFilter> labelGeneral(
+    String imagePath,
+    String? modelPath, {
+    bool plot = true,
+  }) =>
+      _handleRequest(
+        pb.LineRequest(imagePath: imagePath, modelPath: modelPath),
+        plot: plot,
+      );
 
   Future<LineFilter> _handleRequest(
     pb.LineRequest request, {
