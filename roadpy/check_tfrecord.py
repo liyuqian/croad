@@ -44,7 +44,6 @@ def check_tfrecord():
         original_canvas = image_bgr.copy()
         draw_label(original_canvas, label)
         cv2.imshow("original", original_canvas)
-        cv2.waitKey(0)
 
         if model:
             input = bgr_to_input(image_bgr)
@@ -54,7 +53,8 @@ def check_tfrecord():
             test_canvas = image_bgr.copy()
             draw_label(test_canvas, prediction[0], (0, 255, 255), (0, 255, 0))
             cv2.imshow("test", test_canvas)
-            cv2.waitKey(0)
+
+        cv2.waitKey(0)
 
 
 # Colors are in BGR format
