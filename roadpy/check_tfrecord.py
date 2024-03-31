@@ -63,7 +63,7 @@ def draw_label(image_bgr, label, point_color=(0, 0, 255), line_color=(255, 0, 0)
     cv2.drawMarker(
         image_bgr,
         point,
-        point_color,  # bgr
+        point_color,
         markerType=cv2.MARKER_DIAMOND,
         markerSize=20,
         thickness=2,
@@ -78,7 +78,7 @@ def draw_label(image_bgr, label, point_color=(0, 0, 255), line_color=(255, 0, 0)
             point[0] - int(LENGTH * math.sin(left)),
             point[1] + int(LENGTH * math.cos(left)),
         ),
-        line_color,  # bgr
+        line_color,
         thickness=2,
     )
 
@@ -90,7 +90,7 @@ def draw_label(image_bgr, label, point_color=(0, 0, 255), line_color=(255, 0, 0)
             point[0] + int(LENGTH * math.sin(right)),
             point[1] + int(LENGTH * math.cos(right)),
         ),
-        (255, 0, 0),  # bgr
+        line_color,
         thickness=2,
     )
 

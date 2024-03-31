@@ -88,11 +88,15 @@ train_dataset = dataset.skip(test_size)
 model: keras.Model = make_compiled_model()
 print(model.summary())
 
+# Create a callback that saves the model weights every 5 epochs
+cp_callback = tf.keras.callbacks.ModelCheckpoint(
+    filepath="ignore/best_check.keras",
+    save_best_only=True,
+)
+
 model.fit(
     train_dataset,
-    epochs=10,
+    epochs=50,
     validation_data=test_dataset,
-    callbacks=[
-        keras.callbacks.ModelCheckpoint(filepath="ignore/model_at_epoch_{epoch}.keras"),
-    ],
+    callbacks=[cp_callback],
 )
