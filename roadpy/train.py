@@ -1,4 +1,5 @@
 import os
+import sys
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 os.environ["KERAS_BACKEND"] = "jax"
@@ -78,15 +79,21 @@ def make_compiled_model() -> keras.Model:
     return model
 
 
-dataset = load_dataset_rgb_float16().shuffle(1024).batch(32)
+dataset = load_dataset_rgb_float16()
 
 # Split the dataset into train and test datasets
-test_size = 10  # 10 x 32 = 320
-test_dataset = dataset.take(test_size)
-train_dataset = dataset.skip(test_size)
+test_size = 500
+test_dataset = dataset.take(test_size).batch(1)
+train_dataset = dataset.skip(test_size).shuffle(1024).batch(32)
 
 model: keras.Model = make_compiled_model()
-print(model.summary())
+
+if len(sys.argv) > 1:
+    model: keras.Model = keras.models.load_model(sys.argv[1])
+else:
+    model: keras.Model = make_compiled_model()
+    print(model.summary())
+
 
 # Create a callback that saves the model weights every 5 epochs
 cp_callback = tf.keras.callbacks.ModelCheckpoint(
@@ -94,9 +101,12 @@ cp_callback = tf.keras.callbacks.ModelCheckpoint(
     save_best_only=True,
 )
 
-model.fit(
-    train_dataset,
-    epochs=50,
-    validation_data=test_dataset,
-    callbacks=[cp_callback],
-)
+if True:
+    model.fit(
+        train_dataset,
+        epochs=50,
+        validation_data=test_dataset,
+        callbacks=[cp_callback],
+    )
+else:
+    model.evaluate(test_dataset)
