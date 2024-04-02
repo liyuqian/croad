@@ -103,10 +103,11 @@ class LineFilter {
   static const kSaveFile = '/tmp/line_detection.pb';
 
   static const double kMinLength = 20.0;
-  static const Range kYRatioRange = Range(0.4, 0.95);
+  static const Range kYRatioRange = Range(0.3, 0.95);
   static const Range kLeftXRange = Range(0.0, 0.5);
   static const Range kRightXRange = Range(0.5, 1.0);
   static const Range kGuessXRange = Range(0.3, 0.7);
+  static const double kMinBoundaryLineLengthRatio = 0.03; // 3% of width
 
   static const double kGuessNeighborRatio = 0.01; // 1% of width/height
 
@@ -153,6 +154,18 @@ class LineFilter {
     _computeBottomX(detection);
   }
 
+  void refreshRightBottomX(pb.LineDetection newDetection) {
+    _rightBottomX = null;
+    _rightLines.clear();
+    for (final pbLine in newDetection.lines) {
+      final line = Line(pbLine, newDetection);
+      if (_rightConditions.accepts(line)) {
+        _rightLines.add(line);
+      }
+    }
+    _computeRightBottomX(newDetection);
+  }
+
   void _guess(pb.LineDetection detection) {
     _guessedPoint = null;
     if (_medianPoint == null) return;
@@ -169,14 +182,20 @@ class LineFilter {
     _guessedPoint = _medianPoint;
   }
 
-  void _computeBottomX(pb.LineDetection detection) {
+  void _computeRightBottomX(pb.LineDetection detection) {
     for (final line in rightLines) {
+      if (line.length < kMinBoundaryLineLengthRatio * detection.width) continue;
       if (_lineDisagreesWithGuess(line, detection.width)) continue;
       final double bottomX = line.x(detection.height);
       _rightBottomX ??= bottomX;
       _rightBottomX = min(_rightBottomX!, bottomX);
     }
+  }
+
+  void _computeBottomX(pb.LineDetection detection) {
+    _computeRightBottomX(detection);
     for (final line in leftLines) {
+      if (line.length < kMinBoundaryLineLengthRatio * detection.width) continue;
       if (_lineDisagreesWithGuess(line, detection.width)) continue;
       final double bottomX = line.x(detection.height);
       _leftBottomX ??= bottomX;
@@ -185,10 +204,11 @@ class LineFilter {
   }
 
   bool _lineDisagreesWithGuess(Line line, int width) {
-    const kMaxRelativeDistanceX = 0.03; // 3%
+    const kMaxRelativeDistanceW = 0.03; // 3% of the width
     if (_guessedPoint == null) return false;
-    final double x = line.x(_guessedPoint!.y);
-    return (x - _guessedPoint!.x).abs() > kMaxRelativeDistanceX * width;
+    final Vector2 unit = (line.end - line.start).normalized();
+    return unit.cross(_guessedPoint! - line.start).abs() >
+        kMaxRelativeDistanceW * width;
   }
 
   /// Guessed vanishing point where the (straight) road points to.

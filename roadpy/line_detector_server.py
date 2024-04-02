@@ -75,7 +75,7 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
             return self._detectImage(request)
 
     def _hex2bgr(self, hex):
-        return tuple(int(hex[i:i+2], 16) for i in (5, 3, 1))
+        return tuple(int(hex[i : i + 2], 16) for i in (5, 3, 1))
 
     def _detectImage(self, request: label_pb2.LineRequest):
         bgr = cv2.imread(request.image_path)

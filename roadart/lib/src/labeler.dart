@@ -123,17 +123,32 @@ class Labeler {
   }
 
   Future<LineFilter> labelCommaMask(String maskPath, {bool plot = true}) async {
-    return await _handleRequest(
-      pb.LineRequest(imagePath: maskPath, colorMappings: [
-        // comma10k my car to road
-        pb.ColorMapping(fromHex: '#cc00ff', toHex: '#402020'),
-        // comma10k movable to road
-        pb.ColorMapping(fromHex: '#00ff66', toHex: '#402020'),
-        // comma10k movable_in_my_car to road
-        pb.ColorMapping(fromHex: '#00ccff', toHex: '#402020'),
-      ]),
-      plot: plot,
-    );
+    final map = <pb.ColorMapping>[
+      // comma10k my car to road
+      pb.ColorMapping(fromHex: '#cc00ff', toHex: '#402020'),
+      // comma10k movable to road
+      pb.ColorMapping(fromHex: '#00ff66', toHex: '#402020'),
+      // comma10k movable_in_my_car to road
+      pb.ColorMapping(fromHex: '#00ccff', toHex: '#402020'),
+    ];
+    final request = pb.LineRequest(imagePath: maskPath, colorMappings: map);
+    final LineFilter filter = await _handleRequest(request, plot: false);
+
+    // Try to refresh right bottom x without lane markings (i.e., maps comma10k
+    // lane marking to road). This helps detecting road boundaries.
+    request.colorMappings
+        .add(pb.ColorMapping(fromHex: '#ff0000', toHex: '#402020'));
+    final pb.LineDetection newDetection = await _client.detectLines(request);
+    filter.refreshRightBottomX(newDetection);
+    const kNewDetectionProtoDump = '/tmp/new_line_detection.pb';
+    File(kNewDetectionProtoDump).writeAsBytesSync(newDetection.writeToBuffer());
+    _out.writeln('Detection w/o landmarks: ${newDetection.lines.length} lines');
+    _out.writeln('New detection proto saved to $kNewDetectionProtoDump');
+    _out.writeln('Updated right bottom x: ${filter.rightBottomX}');
+    if (plot) {
+      await _plot(newDetection, filter);
+    }
+    return filter;
   }
 
   Future<LineFilter> labelGeneral(
