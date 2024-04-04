@@ -12,6 +12,8 @@ import keras
 
 from tfrecord_utils import IMAGE_W, IMAGE_H, TFRECORD_PATH, bgr_to_input
 
+IGNORE_LEFT = True
+
 print(f"keras backend: {keras.backend.backend()}")
 
 dataset = tf.data.TFRecordDataset(TFRECORD_PATH)
@@ -29,7 +31,7 @@ def decode_png(example):
 
 
 def bgr_to_rgb_float16(image, label):
-    return bgr_to_input(image), label
+    return bgr_to_input(image), tf.multiply(label, [1, 1, 0 if IGNORE_LEFT else 1, 1])
 
 
 def load_dataset_rgb_float16(check: bool = False):
@@ -86,27 +88,21 @@ test_size = 500
 test_dataset = dataset.take(test_size).batch(1)
 train_dataset = dataset.skip(test_size).shuffle(1024).batch(32)
 
-model: keras.Model = make_compiled_model()
-
-if len(sys.argv) > 1:
-    model: keras.Model = keras.models.load_model(sys.argv[1])
-else:
-    model: keras.Model = make_compiled_model()
-    print(model.summary())
-
-
 # Create a callback that saves the model weights every 5 epochs
 cp_callback = tf.keras.callbacks.ModelCheckpoint(
     filepath="ignore/best_check.keras",
     save_best_only=True,
 )
 
-if True:
+if len(sys.argv) > 1:
+    model: keras.Model = keras.models.load_model(sys.argv[1])
+    model.evaluate(test_dataset)
+else:
+    model: keras.Model = make_compiled_model()
+    print(model.summary())
     model.fit(
         train_dataset,
-        epochs=50,
+        epochs=1000,
         validation_data=test_dataset,
         callbacks=[cp_callback],
     )
-else:
-    model.evaluate(test_dataset)
