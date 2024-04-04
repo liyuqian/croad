@@ -39,6 +39,9 @@ def check_tfrecord():
         image = example.features.feature["image"].bytes_list.value[0]
         label = example.features.feature["label"].float_list.value
         print(f"label={label}")
+        if "debug_image_path" in example.features.feature:
+            path = example.features.feature["debug_image_path"].bytes_list.value[0].decode()
+            print(f"debug_image_path={path}")
         image = tf.image.decode_png(image, channels=3)
         image_bgr = image.numpy()
         original_canvas = image_bgr.copy()
@@ -48,6 +51,7 @@ def check_tfrecord():
         if model:
             cv2.imshow("test", draw_prediction(model, image_bgr))
 
+        print()
         cv2.waitKey(0)
 
 

@@ -51,6 +51,9 @@ def process_label_result(result_list, start_index, end_index, thread_id: int):
                     ]
                 )
             ),
+            "debug_image_path": tf.train.Feature(
+                bytes_list=tf.train.BytesList(value=[image_path.encode()])
+            ),
         }
         tf_example = tf.train.Example(features=tf.train.Features(feature=features))
         writer.write(tf_example.SerializeToString())
