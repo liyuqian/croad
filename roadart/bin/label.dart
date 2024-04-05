@@ -36,8 +36,11 @@ Future<void> main(List<String> arguments) async {
     if (argResults[kImageArg] != null) {
       await listenKeyForImage(argResults[kImageArg]!, argResults[kModelArg]);
     } else if (argResults[kVideoArg] != null) {
-      await listenKeyForVideo(argResults[kVideoArg]!,
-          int.parse(argResults[kFrameArg]!), argResults[kModelArg]);
+      await listenKeyForVideo(
+          argResults[kVideoArg]!,
+          int.parse(argResults[kFrameArg]!),
+          argResults[kModelArg],
+          argResults[kResultArg]);
     } else {
       print(parser.usage);
     }
@@ -64,8 +67,8 @@ Future<void> main(List<String> arguments) async {
   labelSet.save();
 }
 
-Future<void> listenKeyForVideo(
-    String videoPath, int frameIndex, String? modelPath) async {
+Future<void> listenKeyForVideo(String videoPath, int frameIndex,
+    String? modelPath, String? resultPath) async {
   final labeler = Labeler();
   await labeler.start();
   await labeler.labelVideo(videoPath, frameIndex, modelPath);
@@ -75,6 +78,8 @@ Future<void> listenKeyForVideo(
     print('frame: ${frameIndex += frameDelta}');
     await labeler.labelVideo(videoPath, frameIndex, modelPath);
   }
+
+  LabelSet? labelSet = resultPath == null ? null : LabelSet(resultPath);
 
   late StreamSubscription sub;
   sub = stdin.map<String>(String.fromCharCodes).listen((String key) async {
@@ -91,6 +96,9 @@ Future<void> listenKeyForVideo(
       await update(1);
     } else if (key == 'j') {
       await update(-1);
+    } else if (key == 'f') {
+      await labeler.exportLabel(labelSet!);
+      print('');
     } else {
       print('Unknown key: $key');
     }

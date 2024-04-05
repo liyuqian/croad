@@ -114,6 +114,8 @@ class LineFilter {
   // 20% width * 20% height. Or 100 * 2% width * 2% height.
   static const double kMinGuessNeighborWeightSumRatio = 0.04;
 
+  String debugImagePath = ''; // image path, or video path and frame index.
+
   void process(pb.LineDetection detection) {
     _detection = detection;
     if (kSaveProto) {

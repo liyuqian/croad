@@ -8,6 +8,7 @@ import 'package:roadart/proto/label.pbgrpc.dart' as pb;
 import 'package:vector_math/vector_math_64.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'label_set.dart';
 import 'line_filter.dart';
 
 part 'labeler.freezed.dart';
@@ -77,9 +78,24 @@ class Labeler {
     await _serverErr!.close();
   }
 
+  Future<void> exportLabel(LabelSet labelSet) async {
+    if (_lastFilter == null) {
+      _out.writeln('No filter to export label');
+      return;
+    }
+    final LabelResult? result = _makeResult(_lastFilter!);
+    if (result == null) {
+      _out.writeln('Failed to generate label.');
+      return;
+    }
+    labelSet.add(result.imagePath, result);
+    labelSet.save();
+    _out.writeln('Exported label to ${labelSet.jsonPath}');
+  }
+
   Future<void> labelVideo(
       String videoPath, int frameIndex, String? modelPath) async {
-    await _handleRequest(pb.LineRequest(
+    _lastFilter = await _handleRequest(pb.LineRequest(
         videoPath: videoPath, frameIndex: frameIndex, modelPath: modelPath));
   }
 
@@ -100,25 +116,12 @@ class Labeler {
   Future<LabelResult?> labelCommaImage(String imagePath) async {
     final String maskPath = imagePath.replaceAll('imgs', 'masks');
     final LineFilter processed = await labelCommaMask(maskPath, plot: false);
-    if (processed.guessedPoint == null ||
-        processed.leftBottomX == null ||
-        processed.rightBottomX == null) {
-      return null;
+    final LabelResult? result = _makeResult(processed);
+    if (result != null) {
+      final jsonStr = JsonEncoder.withIndent('  ').convert(result.toJson());
+      _out.writeln('Label result: $jsonStr\n');
     }
-    final Vector2 c = processed.guessedPoint!;
-    final int h = processed.detection!.height;
-    final int w = processed.detection!.width;
-    final double leftAngle = atan((c.x - processed.leftBottomX!) / (h - c.y));
-    final double rightAngle = atan((processed.rightBottomX! - c.x) / (h - c.y));
-    final result = LabelResult(
-      imagePath: imagePath,
-      xRatio: c.x / w,
-      yRatio: c.y / h,
-      leftRatio: leftAngle / (pi / 2),
-      rightRatio: rightAngle / (pi / 2),
-    );
-    final jsonStr = JsonEncoder.withIndent('  ').convert(result.toJson());
-    _out.writeln('Label result: $jsonStr\n');
+    _lastFilter = processed;
     return result;
   }
 
@@ -148,6 +151,7 @@ class Labeler {
     if (plot) {
       await _plot(newDetection, filter);
     }
+    _lastFilter = filter;
     return filter;
   }
 
@@ -155,11 +159,33 @@ class Labeler {
     String imagePath,
     String? modelPath, {
     bool plot = true,
-  }) =>
-      _handleRequest(
-        pb.LineRequest(imagePath: imagePath, modelPath: modelPath),
-        plot: plot,
-      );
+  }) async {
+    _lastFilter = await _handleRequest(
+      pb.LineRequest(imagePath: imagePath, modelPath: modelPath),
+      plot: plot,
+    );
+    return _lastFilter!;
+  }
+
+  LabelResult? _makeResult(LineFilter processed) {
+    if (processed.guessedPoint == null ||
+        processed.leftBottomX == null ||
+        processed.rightBottomX == null) {
+      return null;
+    }
+    final Vector2 c = processed.guessedPoint!;
+    final int h = processed.detection!.height;
+    final int w = processed.detection!.width;
+    final double leftAngle = atan((c.x - processed.leftBottomX!) / (h - c.y));
+    final double rightAngle = atan((processed.rightBottomX! - c.x) / (h - c.y));
+    return LabelResult(
+      imagePath: processed.debugImagePath,
+      xRatio: c.x / w,
+      yRatio: c.y / h,
+      leftRatio: leftAngle / (pi / 2),
+      rightRatio: rightAngle / (pi / 2),
+    );
+  }
 
   Future<LineFilter> _handleRequest(
     pb.LineRequest request, {
@@ -186,6 +212,12 @@ class Labeler {
 
     if (plot) {
       await _plot(detection, filter);
+    }
+
+    if (request.hasImagePath()) {
+      filter.debugImagePath = request.imagePath;
+    } else if (request.hasVideoPath()) {
+      filter.debugImagePath = '${request.videoPath}:${request.frameIndex}';
     }
 
     return filter;
@@ -242,4 +274,5 @@ class Labeler {
   Process? _serverProcess;
   late ClientChannel _channel;
   late pb.LineDetectorClient _client;
+  LineFilter? _lastFilter;
 }
