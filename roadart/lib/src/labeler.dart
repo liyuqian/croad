@@ -93,6 +93,15 @@ class Labeler {
     _out.writeln('Exported label to ${labelSet.jsonPath}');
   }
 
+  Future<void> adjustUp() async {
+    if (_lastFilter == null || _lastFilter!.guessedPoint == null) {
+      _out.writeln('Nothing to adjust');
+      return;
+    }
+    _lastFilter!.adjustRightBottomX(1);
+    await _plot(_lastFilter!);
+  }
+
   Future<void> labelVideo(
       String videoPath, int frameIndex, String? modelPath) async {
     _lastFilter = await _handleRequest(pb.LineRequest(
@@ -149,7 +158,7 @@ class Labeler {
     _out.writeln('New detection proto saved to $kNewDetectionProtoDump');
     _out.writeln('Updated right bottom x: ${filter.rightBottomX}');
     if (plot) {
-      await _plot(newDetection, filter);
+      await _plot(filter);
     }
     _lastFilter = filter;
     return filter;
@@ -211,7 +220,7 @@ class Labeler {
     _out.writeln('Processed in ${stopwatch.elapsedMilliseconds}ms');
 
     if (plot) {
-      await _plot(detection, filter);
+      await _plot(filter);
     }
 
     if (request.hasImagePath()) {
@@ -223,12 +232,12 @@ class Labeler {
     return filter;
   }
 
-  Future<void> _plot(pb.LineDetection detection, LineFilter filter) async {
+  Future<void> _plot(LineFilter filter) async {
     final stopwatch = Stopwatch()..start();
     await _client.plot(pb.PlotRequest(
       points: filter.intersections.map((v) => vec2Proto(v)),
       pointColor: 'blue',
-      lines: _computeBoundaries(filter, detection),
+      lines: _computeBoundaries(filter),
       lineColor: 'blue',
     ));
     await _client.plot(pb.PlotRequest(
@@ -246,8 +255,8 @@ class Labeler {
     _out.writeln('Plotted in ${stopwatch.elapsedMilliseconds}ms\n');
   }
 
-  List<pb.Line> _computeBoundaries(
-      LineFilter filter, pb.LineDetection detection) {
+  List<pb.Line> _computeBoundaries(LineFilter filter) {
+    final pb.LineDetection detection = filter.detection!;
     final List<pb.Line> boundaries = [];
     if (filter.guessedPoint == null) return boundaries;
     final Vector2 c = filter.guessedPoint!;

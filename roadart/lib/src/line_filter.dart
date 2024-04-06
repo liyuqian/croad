@@ -168,6 +168,12 @@ class LineFilter {
     _computeRightBottomX(newDetection);
   }
 
+  void adjustRightBottomX(int indexDelta) {
+    _rightBottomIndex = (_rightBottomIndex! + indexDelta + rightLines.length) %
+        rightLines.length;
+    _rightBottomX = rightLines[_rightBottomIndex!].x(detection!.height);
+  }
+
   void _guess(pb.LineDetection detection) {
     _guessedPoint = null;
     if (_medianPoint == null) return;
@@ -185,12 +191,17 @@ class LineFilter {
   }
 
   void _computeRightBottomX(pb.LineDetection detection) {
-    for (final line in rightLines) {
+    _rightLines.sort((Line a, Line b) =>
+        a.x(detection.height).compareTo(b.x(detection.height)));
+    for (int i = 0; i < rightLines.length; ++i) {
+      final Line line = rightLines[i];
       if (line.length < kMinBoundaryLineLengthRatio * detection.width) continue;
       if (_lineDisagreesWithGuess(line, detection.width)) continue;
       final double bottomX = line.x(detection.height);
-      _rightBottomX ??= bottomX;
-      _rightBottomX = min(_rightBottomX!, bottomX);
+      if (_rightBottomX == null || _rightBottomX! > bottomX) {
+        _rightBottomX = bottomX;
+        _rightBottomIndex = i;
+      }
     }
   }
 
@@ -226,6 +237,7 @@ class LineFilter {
   /// Only valid after calling [process].
   double? get rightBottomX => _rightBottomX;
   double? _rightBottomX;
+  int? _rightBottomIndex;
 
   /// The maximum x value for filtered right lines at the bottom of the image.
   /// Only valid after calling [process].
