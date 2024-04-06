@@ -93,12 +93,13 @@ class Labeler {
     _out.writeln('Exported label to ${labelSet.jsonPath}');
   }
 
-  Future<void> adjustUp() async {
+  Future<void> adjustRight(int indexDelta) async {
     if (_lastFilter == null || _lastFilter!.guessedPoint == null) {
       _out.writeln('Nothing to adjust');
       return;
     }
-    _lastFilter!.adjustRightBottomX(1);
+    _lastFilter!.adjustRightBottomX(indexDelta);
+    await _client.resetPlot(pb.Empty());
     await _plot(_lastFilter!);
   }
 

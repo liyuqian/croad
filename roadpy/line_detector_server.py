@@ -42,6 +42,16 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
             print(traceback.format_exc())
             raise
 
+    def ResetPlot(self, request: label_pb2.Empty, context):
+        try:
+            print(f"Resetting plot")
+            self._reset()
+            return label_pb2.Empty()
+        except Exception as e:
+            print(f"Error: {e}")
+            print(traceback.format_exc())
+            raise
+
     def ExportPng(self, request, context):
         try:
             print(f"Exporting {PNG_PATH}")
@@ -118,8 +128,12 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
             rgb = cv2.cvtColor(predicted_bgr, cv2.COLOR_BGR2RGB)
 
         self._fig = px.imshow(rgb)
+        self._rgb = rgb
 
         return detection
+
+    def _reset(self):
+        self._fig = px.imshow(self._rgb)
 
     def _savePng(self):
         # Image Viewer can show this png without smoothing and auto-reload.
@@ -128,6 +142,7 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
         print(f"Saved {PNG_PATH}")
 
     _detector = cv2.createLineSegmentDetector()
+    _rgb: np.ndarray = None # cached RGB image for resetting plot
     _fig: go.Figure = None
     _modelPath: str = None
     _model: keras.Model = None

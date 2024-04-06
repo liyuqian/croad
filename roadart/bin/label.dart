@@ -99,8 +99,10 @@ Future<void> listenKeyForVideo(String videoPath, int frameIndex,
     } else if (key == 'f') {
       await labeler.exportLabel(labelSet!);
       print('');
+    } else if (key == 'i') {
+      await labeler.adjustRight(1);
     } else if (key == 'u') {
-      await labeler.adjustUp();
+      await labeler.adjustRight(-1);
     } else {
       print('Unknown key: $key');
     }

@@ -53,4 +53,5 @@ service LineDetector {
   rpc DetectLines(LineRequest) returns (LineDetection);
   rpc Plot(PlotRequest) returns (Empty);
   rpc ExportPng(Empty) returns (Empty);
+  rpc ResetPlot(Empty) returns (Empty);
 }
