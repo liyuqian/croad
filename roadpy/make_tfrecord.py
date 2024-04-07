@@ -3,6 +3,7 @@ import pdb
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
+import click
 import cv2
 import json
 import tensorflow as tf
@@ -19,17 +20,20 @@ from tfrecord_utils import (
 
 
 def get_resized(image_path: str, width: int, height: int):
-    image = cv2.imread(image_path)
+    if image_path.endswith(".png") or image_path.endswith(".jpg"):
+        image = cv2.imread(image_path)
+    else:
+        split: int = image_path.rfind(":")
+        video_path = image_path[:split]
+        frame_index = int(image_path[split + 1 :])
+        cap = cv2.VideoCapture(video_path)
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+        _, image = cap.read()
+        cap.release()
     return resize_image(image, width, height)
 
 
-with open(RESULT_JSON_PATH) as f:
-    label_result = json.load(f)
-
-writer = tf.io.TFRecordWriter(TFRECORD_PATH)
-
-
-def process_label_result(result_list, start_index, end_index, thread_id: int):
+def process_label_result(writer, result_list, start_index, end_index, thread_id: int):
     total: int = end_index - start_index
     for i in range(start_index, end_index):
         json_map = result_list[i]
@@ -60,30 +64,49 @@ def process_label_result(result_list, start_index, end_index, thread_id: int):
 
         processed = i - start_index + 1
         if processed % 100 == 0:
-            print(f"Thread {thread_id} processed {processed} / {total} files")
+            print(f"Thread {thread_id} processed {processed} / {total} images")
 
 
-# Shuffle
-result_list = list(label_result.values())
-random.shuffle(result_list)
+@click.command()
+@click.option("--json_path", default=RESULT_JSON_PATH, help="Path to JSON file")
+@click.option("--tfrecord_path", default=TFRECORD_PATH, help="Path to TFRecord file")
+@click.option("--num_threads", default=8, help="Number of threads to use")
+def make_tfrecord(json_path: str, tfrecord_path: str, num_threads: int):
+    print(f"Converting {json_path} to {tfrecord_path} using {num_threads} threads")
 
-# Split label_result into 8 threads
-num_threads = 8
-total_files = len(result_list)
-files_per_thread = total_files // num_threads
+    with open(json_path) as f:
+        label_result = json.load(f)
 
-threads = []
-for i in range(num_threads):
-    start_index = i * files_per_thread
-    end_index = start_index + files_per_thread if i < num_threads - 1 else total_files
-    thread = threading.Thread(
-        target=process_label_result, args=(result_list, start_index, end_index, i)
-    )
-    thread.start()
-    threads.append(thread)
+    writer = tf.io.TFRecordWriter(tfrecord_path)
 
-# Wait for all threads to finish
-for thread in threads:
-    thread.join()
+    # Shuffle
+    result_list = list(label_result.values())
+    random.shuffle(result_list)
 
-writer.close()
+    # Split label_result into 8 threads
+    num_threads = 8
+    total_files = len(result_list)
+    files_per_thread = total_files // num_threads
+
+    threads = []
+    for i in range(num_threads):
+        start_index = i * files_per_thread
+        end_index = (
+            start_index + files_per_thread if i < num_threads - 1 else total_files
+        )
+        thread = threading.Thread(
+            target=process_label_result,
+            args=(writer, result_list, start_index, end_index, i),
+        )
+        thread.start()
+        threads.append(thread)
+
+    # Wait for all threads to finish
+    for thread in threads:
+        thread.join()
+
+    writer.close()
+
+
+if __name__ == "__main__":
+    make_tfrecord()

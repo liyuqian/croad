@@ -4,6 +4,7 @@ import pdb
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 os.environ["KERAS_BACKEND"] = "jax"
 
+import click
 import math
 import keras
 import tensorflow as tf
@@ -13,7 +14,14 @@ import sys
 from tfrecord_utils import TFRECORD_PATH, draw_label, draw_prediction
 
 
-def check_tfrecord():
+@click.command()
+@click.option("--tfrecord_path", type=str, default=TFRECORD_PATH)
+@click.option("--model_file", type=str, default=None)
+@click.argument("skip_count", type=int)
+@click.argument("take_count", type=int)
+def check_tfrecord(
+    tfrecord_path: str, model_file: str, skip_count: int, take_count: int
+):
     """
     This script reads a TFRecord file containing labeled images and displays them.
 
@@ -30,17 +38,20 @@ def check_tfrecord():
     Note: The TFRecord file path is hardcoded as TFRECORD_PATH.
     """
 
-    raw_dataset = tf.data.TFRecordDataset(TFRECORD_PATH)
-    model_file = sys.argv[3] if len(sys.argv) > 3 else None
+    raw_dataset = tf.data.TFRecordDataset(tfrecord_path)
     model = keras.models.load_model(model_file) if model_file else None
-    for raw_record in raw_dataset.skip(int(sys.argv[1])).take(int(sys.argv[2])):
+    for raw_record in raw_dataset.skip(skip_count).take(int(take_count)):
         example = tf.train.Example()
         example.ParseFromString(raw_record.numpy())
         image = example.features.feature["image"].bytes_list.value[0]
         label = example.features.feature["label"].float_list.value
         print(f"label={label}")
         if "debug_image_path" in example.features.feature:
-            path = example.features.feature["debug_image_path"].bytes_list.value[0].decode()
+            path = (
+                example.features.feature["debug_image_path"]
+                .bytes_list.value[0]
+                .decode()
+            )
             print(f"debug_image_path={path}")
         image = tf.image.decode_png(image, channels=3)
         image_bgr = image.numpy()
@@ -55,4 +66,5 @@ def check_tfrecord():
         cv2.waitKey(0)
 
 
-check_tfrecord()
+if __name__ == "__main__":
+    check_tfrecord()
