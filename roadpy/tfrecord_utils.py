@@ -14,6 +14,23 @@ IMAGE_H = 360
 RESULT_JSON_PATH = "../data/label_result.json"
 TFRECORD_PATH = "../data/labeled_bgr.tfrecord"
 
+def split_dataset(dataset):
+    """
+    Splits the given dataset into test and train datasets.
+
+    Args:
+        dataset: The input dataset to be split.
+
+    Returns:
+        A tuple containing the test dataset and train dataset.
+    """
+    shuffled = dataset.shuffle(1024, seed=0, reshuffle_each_iteration=False)
+    test_size = 500
+    test_dataset = shuffled.take(test_size).batch(1)
+    train_dataset = (
+        shuffled.skip(test_size).shuffle(1024, reshuffle_each_iteration=True).batch(32)
+    )
+    return test_dataset, train_dataset
 
 def resize_image(image, width: int, height: int):
     old_height, old_width = image.shape[:2]
@@ -39,10 +56,12 @@ def resize_image(image, width: int, height: int):
 
     return padded_image
 
+
 def bgr_to_input(image):
     image = tf.cast(image, tf.float16)
     image = tf.reverse(image, axis=[-1])
     return image / 255
+
 
 # Colors are in BGR format
 def draw_label(image_bgr, label, point_color=(0, 0, 255), line_color=(255, 0, 0)):
@@ -80,6 +99,7 @@ def draw_label(image_bgr, label, point_color=(0, 0, 255), line_color=(255, 0, 0)
         line_color,
         thickness=2,
     )
+
 
 # Return a new bgr image with the prediction lines
 def draw_prediction(model: keras.Model, image_bgr):

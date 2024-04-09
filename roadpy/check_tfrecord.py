@@ -1,4 +1,5 @@
 import os
+import glob
 import pdb
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
@@ -11,7 +12,7 @@ import tensorflow as tf
 import cv2
 import sys
 
-from tfrecord_utils import TFRECORD_PATH, draw_label, draw_prediction
+from tfrecord_utils import TFRECORD_PATH, draw_label, draw_prediction, split_dataset
 
 
 @click.command()
@@ -38,11 +39,12 @@ def check_tfrecord(
     Note: The TFRecord file path is hardcoded as TFRECORD_PATH.
     """
 
-    raw_dataset = tf.data.TFRecordDataset(tfrecord_path)
+    raw_dataset = tf.data.TFRecordDataset(glob.glob(tfrecord_path))
+    test_set, train_set = split_dataset(raw_dataset)
     model = keras.models.load_model(model_file) if model_file else None
-    for raw_record in raw_dataset.skip(skip_count).take(int(take_count)):
+    for raw_record in test_set.skip(skip_count).take(int(take_count)):
         example = tf.train.Example()
-        example.ParseFromString(raw_record.numpy())
+        example.ParseFromString(raw_record[0].numpy())
         image = example.features.feature["image"].bytes_list.value[0]
         label = example.features.feature["label"].float_list.value
         print(f"label={label}")

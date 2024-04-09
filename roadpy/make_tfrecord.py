@@ -33,7 +33,12 @@ def get_resized(image_path: str, width: int, height: int):
     return resize_image(image, width, height)
 
 
-def process_label_result(writer, result_list, start_index, end_index, thread_id: int):
+def process_label_result(
+    tfrecord_path: str, result_list, start_index, end_index, thread_id: int
+):
+    writer = tf.io.TFRecordWriter(
+        tfrecord_path.replace(".tfrecord", f"_{thread_id}.tfrecord")
+    )
     total: int = end_index - start_index
     for i in range(start_index, end_index):
         json_map = result_list[i]
@@ -65,6 +70,7 @@ def process_label_result(writer, result_list, start_index, end_index, thread_id:
         processed = i - start_index + 1
         if processed % 100 == 0:
             print(f"Thread {thread_id} processed {processed} / {total} images")
+    writer.close()
 
 
 @click.command()
@@ -76,8 +82,6 @@ def make_tfrecord(json_path: str, tfrecord_path: str, num_threads: int):
 
     with open(json_path) as f:
         label_result = json.load(f)
-
-    writer = tf.io.TFRecordWriter(tfrecord_path)
 
     # Shuffle
     result_list = list(label_result.values())
@@ -96,7 +100,7 @@ def make_tfrecord(json_path: str, tfrecord_path: str, num_threads: int):
         )
         thread = threading.Thread(
             target=process_label_result,
-            args=(writer, result_list, start_index, end_index, i),
+            args=(tfrecord_path, result_list, start_index, end_index, i),
         )
         thread.start()
         threads.append(thread)
@@ -104,8 +108,6 @@ def make_tfrecord(json_path: str, tfrecord_path: str, num_threads: int):
     # Wait for all threads to finish
     for thread in threads:
         thread.join()
-
-    writer.close()
 
 
 if __name__ == "__main__":

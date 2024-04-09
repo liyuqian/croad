@@ -1,5 +1,6 @@
 import os
 import sys
+import glob
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 os.environ["KERAS_BACKEND"] = "jax"
@@ -10,7 +11,13 @@ import cv2
 import tensorflow as tf
 import keras
 
-from tfrecord_utils import IMAGE_W, IMAGE_H, TFRECORD_PATH, bgr_to_input
+from tfrecord_utils import (
+    IMAGE_W,
+    IMAGE_H,
+    TFRECORD_PATH,
+    bgr_to_input,
+    split_dataset,
+)
 
 IGNORE_LEFT = True
 
@@ -35,7 +42,7 @@ def bgr_to_rgb_float16(image, label):
 
 
 def load_dataset_rgb_float16(check: bool = False):
-    dataset = tf.data.TFRecordDataset(TFRECORD_PATH)
+    dataset = tf.data.TFRecordDataset(glob.glob("../data/*.tfrecord"))
     decoded = dataset.map(decode_png)
     rgb_float_dataset = decoded.map(bgr_to_rgb_float16)
     if check:
@@ -84,9 +91,7 @@ def make_compiled_model() -> keras.Model:
 dataset = load_dataset_rgb_float16()
 
 # Split the dataset into train and test datasets
-test_size = 500
-test_dataset = dataset.take(test_size).batch(1)
-train_dataset = dataset.skip(test_size).shuffle(1024).batch(32)
+test_dataset, train_dataset = split_dataset(dataset)
 
 # Create a callback that saves the model weights every 5 epochs
 cp_callback = tf.keras.callbacks.ModelCheckpoint(
@@ -102,7 +107,7 @@ else:
     print(model.summary())
     model.fit(
         train_dataset,
-        epochs=1000,
+        epochs=50,
         validation_data=test_dataset,
         callbacks=[cp_callback],
     )
