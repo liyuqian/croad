@@ -57,10 +57,9 @@ def resize_image(image, width: int, height: int):
     return padded_image
 
 
-def bgr_to_input(image):
-    image = tf.cast(image, tf.float16)
+def bgr_to_rgb(image):
     image = tf.reverse(image, axis=[-1])
-    return image / 255
+    return image
 
 
 # Colors are in BGR format
@@ -104,7 +103,7 @@ def draw_label(image_bgr, label, point_color=(0, 0, 255), line_color=(255, 0, 0)
 # Return a new bgr image with the prediction lines
 def draw_prediction(model: keras.Model, image_bgr):
     resized = resize_image(image_bgr, IMAGE_W, IMAGE_H)
-    input = bgr_to_input(resized)
+    input = bgr_to_rgb(resized)
     input = tf.expand_dims(input, 0)
     prediction = model.predict(input)
     print(f"prediction={prediction}")

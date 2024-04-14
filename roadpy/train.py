@@ -15,7 +15,7 @@ from tfrecord_utils import (
     IMAGE_W,
     IMAGE_H,
     TFRECORD_PATH,
-    bgr_to_input,
+    bgr_to_rgb,
     split_dataset,
 )
 
@@ -37,14 +37,14 @@ def decode_png(example):
     return image, example["label"]
 
 
-def bgr_to_rgb_float16(image, label):
-    return bgr_to_input(image), tf.multiply(label, [1, 1, 0 if IGNORE_LEFT else 1, 1])
+def bgr_to_input(image, label):
+    return bgr_to_rgb(image), tf.multiply(label, [1, 1, 0 if IGNORE_LEFT else 1, 1])
 
 
-def load_dataset_rgb_float16(check: bool = False):
+def load_dataset_rgb_int8(check: bool = False):
     dataset = tf.data.TFRecordDataset(glob.glob("../data/*.tfrecord"))
     decoded = dataset.map(decode_png)
-    rgb_float_dataset = decoded.map(bgr_to_rgb_float16)
+    rgb_float_dataset = decoded.map(bgr_to_input)
     if check:
         for record in decoded.take(1):
             image, label = record
@@ -73,8 +73,9 @@ def make_block(x, channels: int):
 
 
 def make_compiled_model() -> keras.Model:
-    input = keras.layers.Input(shape=(IMAGE_H, IMAGE_W, 3))
+    input = keras.layers.Input(shape=(IMAGE_H, IMAGE_W, 3), dtype=tf.uint8)
     x = input
+    x = keras.layers.Rescaling(1 / 255.0, dtype=tf.float16)(x)
     h, w, c = IMAGE_H, IMAGE_W, 8
     while w > 5:
         x = make_block(x, c)
@@ -88,7 +89,7 @@ def make_compiled_model() -> keras.Model:
     return model
 
 
-dataset = load_dataset_rgb_float16()
+dataset = load_dataset_rgb_int8()
 
 # Split the dataset into train and test datasets
 test_dataset, train_dataset = split_dataset(dataset)

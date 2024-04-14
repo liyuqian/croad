@@ -24,7 +24,7 @@ def convert_model_to_onnx(model_path, output_path):
     """
     model = keras.models.load_model(model_path)
 
-    spec = (tf.TensorSpec([None, IMAGE_H, IMAGE_W, 3], tf.float16, name="input"),)
+    spec = (tf.TensorSpec([None, IMAGE_H, IMAGE_W, 3], tf.uint8, name="input"),)
     model_proto, _ = tf2onnx.convert.from_keras(
         model, input_signature=spec, output_path=output_path
     )
