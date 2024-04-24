@@ -75,7 +75,7 @@ def make_block(x, channels: int):
 def make_compiled_model() -> keras.Model:
     input = keras.layers.Input(shape=(IMAGE_H, IMAGE_W, 3), dtype=tf.uint8)
     x = input
-    x = keras.layers.Rescaling(1 / 255.0, dtype=tf.float16)(x)
+    x = keras.layers.Rescaling(1 / 255.0, dtype=tf.float32)(x) # no fp16 in tflite
     h, w, c = IMAGE_H, IMAGE_W, 8
     while w > 5:
         x = make_block(x, c)
