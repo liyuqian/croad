@@ -63,6 +63,15 @@ def load_dataset_rgb_int8(check: bool = False):
 
 
 def make_block(x, channels: int):
+    conv = keras.layers.DepthwiseConv2D(kernel_size=(3, 3), padding="same")(x)
+    conv = keras.layers.BatchNormalization()(conv)
+    conv = keras.layers.ReLU()(conv)
+    conv = keras.layers.Conv2D(channels, kernel_size=(1, 1), padding="same")(conv)
+    conv = keras.layers.BatchNormalization()(conv)
+    conv = keras.layers.ReLU()(conv)
+    return keras.layers.MaxPool2D(pool_size=(2, 2))(conv)
+
+    # The following uses full Conv2D, which is about 10x slower than DepthwiseConv2D.
     conv = keras.layers.Conv2D(channels, kernel_size=(3, 3), padding="same")(x)
     conv = keras.layers.BatchNormalization()(conv)
     conv = keras.layers.ReLU()(conv)
@@ -75,13 +84,14 @@ def make_block(x, channels: int):
 def make_compiled_model() -> keras.Model:
     input = keras.layers.Input(shape=(IMAGE_H, IMAGE_W, 3), dtype=tf.uint8)
     x = input
-    x = keras.layers.Rescaling(1 / 255.0, dtype=tf.float32)(x) # no fp16 in tflite
+    x = keras.layers.Rescaling(1 / 255.0, dtype=tf.float32)(x)  # no fp16 in tflite
     h, w, c = IMAGE_H, IMAGE_W, 8
     while w > 5:
         x = make_block(x, c)
         h, w, c = h // 2, w // 2, c * 2
+    x = keras.layers.GlobalAveragePooling2D()(x)
     x = keras.layers.Flatten()(x)
-    x = keras.layers.Dense(1024, activation="relu")(x)
+    x = keras.layers.Dense(256, activation="relu")(x)
     x = keras.layers.Dense(128, activation="relu")(x)
     output = keras.layers.Dense(4, activation="sigmoid")(x)
     model = keras.Model(inputs=input, outputs=output)
@@ -94,21 +104,23 @@ dataset = load_dataset_rgb_int8()
 # Split the dataset into train and test datasets
 test_dataset, train_dataset = split_dataset(dataset)
 
-# Create a callback that saves the model weights every 5 epochs
-cp_callback = tf.keras.callbacks.ModelCheckpoint(
-    filepath="ignore/best_check.keras",
-    save_best_only=True,
-)
-
 if len(sys.argv) > 1:
     model: keras.Model = keras.models.load_model(sys.argv[1])
     model.evaluate(test_dataset)
 else:
     model: keras.Model = make_compiled_model()
     print(model.summary())
+
+    # Create a callback that saves the best model weights
+    cp_callback = tf.keras.callbacks.ModelCheckpoint(
+        filepath="ignore/best_check.keras",
+        save_best_only=True,
+    )
+    board_callback = keras.callbacks.TensorBoard(log_dir="ignore/logs")
+
     model.fit(
         train_dataset,
         epochs=50,
         validation_data=test_dataset,
-        callbacks=[cp_callback],
+        callbacks=[cp_callback, board_callback],
     )
