@@ -110,8 +110,9 @@ def make_compiled_model() -> keras.Model:
 
 
 def make_mobilenet_pretrained() -> keras.Model:
+    input = keras.layers.Input(shape=(IMAGE_H, IMAGE_W, 3), dtype=tf.uint8)
     base_model = keras.applications.MobileNetV3Large(
-        include_top=False, input_shape=(IMAGE_H, IMAGE_W, 3)
+        include_top=False, input_shape=(IMAGE_H, IMAGE_W, 3), input_tensor=input
     )
 
     base_model.trainable = True
