@@ -81,6 +81,21 @@ def make_block(x, channels: int):
     return keras.layers.MaxPool2D(pool_size=(2, 2))(conv)
 
 
+def make_output_layers(x):
+    x = keras.layers.GlobalAveragePooling2D()(x)
+    x = keras.layers.Flatten()(x)
+    x = keras.layers.Dense(256, activation="relu")(x)
+    x = keras.layers.Dense(128, activation="relu")(x)
+    output = keras.layers.Dense(4, activation="sigmoid")(x)
+    return output
+
+
+def compile_model(input, output):
+    model = keras.Model(inputs=input, outputs=output)
+    model.compile(optimizer=keras.optimizers.Adam(learning_rate=1e-4), loss="mse")
+    return model
+
+
 def make_compiled_model() -> keras.Model:
     input = keras.layers.Input(shape=(IMAGE_H, IMAGE_W, 3), dtype=tf.uint8)
     x = input
@@ -89,14 +104,19 @@ def make_compiled_model() -> keras.Model:
     while w > 5:
         x = make_block(x, c)
         h, w, c = h // 2, w // 2, c * 2
-    x = keras.layers.GlobalAveragePooling2D()(x)
-    x = keras.layers.Flatten()(x)
-    x = keras.layers.Dense(256, activation="relu")(x)
-    x = keras.layers.Dense(128, activation="relu")(x)
-    output = keras.layers.Dense(4, activation="sigmoid")(x)
-    model = keras.Model(inputs=input, outputs=output)
-    model.compile(optimizer=keras.optimizers.Adam(learning_rate=1e-4), loss="mse")
-    return model
+
+    output = make_output_layers(x)
+    return compile_model(input, output)
+
+
+def make_mobilenet_pretrained() -> keras.Model:
+    base_model = keras.applications.MobileNetV3Large(
+        include_top=False, input_shape=(IMAGE_H, IMAGE_W, 3)
+    )
+
+    base_model.trainable = True
+    output = make_output_layers(base_model.output)
+    return compile_model(base_model.input, output)
 
 
 dataset = load_dataset_rgb_int8()
@@ -108,7 +128,8 @@ if len(sys.argv) > 1:
     model: keras.Model = keras.models.load_model(sys.argv[1])
     model.evaluate(test_dataset)
 else:
-    model: keras.Model = make_compiled_model()
+    # model: keras.Model = make_compiled_model()
+    model: keras.Model = make_mobilenet_pretrained()
     print(model.summary())
 
     # Create a callback that saves the best model weights
@@ -120,7 +141,7 @@ else:
 
     model.fit(
         train_dataset,
-        epochs=50,
+        epochs=500,
         validation_data=test_dataset,
         callbacks=[cp_callback, board_callback],
     )
