@@ -142,7 +142,7 @@ else:
 
     model.fit(
         train_dataset,
-        epochs=500,
+        epochs=2000,
         validation_data=test_dataset,
         callbacks=[cp_callback, board_callback],
     )

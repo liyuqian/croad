@@ -3,7 +3,7 @@ import sys
 import os
 import traceback
 
-from tfrecord_utils import bgr_to_input, draw_prediction
+from tfrecord_utils import draw_prediction
 
 os.environ["KERAS_BACKEND"] = "jax"
 import keras
