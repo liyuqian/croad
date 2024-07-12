@@ -34,6 +34,7 @@ def decode_png(example):
     }
     example = tf.io.parse_single_example(example, features)
     image = tf.image.decode_png(example["image"], channels=3)
+    image = tf.image.resize(image, [IMAGE_H, IMAGE_W])
     return image, example["label"]
 
 

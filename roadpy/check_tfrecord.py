@@ -12,7 +12,7 @@ import tensorflow as tf
 import cv2
 import sys
 
-from tfrecord_utils import TFRECORD_PATH, draw_label, draw_prediction, split_dataset
+from tfrecord_utils import TFRECORD_PATH, draw_label, draw_prediction, resize_image, split_dataset
 
 
 @click.command()
@@ -35,8 +35,6 @@ def check_tfrecord(
     Example:
     python check_tfrecord.py 0 10
     This will skip 0 records and display the first 10 records.
-
-    Note: The TFRecord file path is hardcoded as TFRECORD_PATH.
     """
 
     raw_dataset = tf.data.TFRecordDataset(glob.glob(tfrecord_path))
@@ -56,7 +54,7 @@ def check_tfrecord(
             )
             print(f"debug_image_path={path}")
         image = tf.image.decode_png(image, channels=3)
-        image_bgr = image.numpy()
+        image_bgr = resize_image(image.numpy())
         original_canvas = image_bgr.copy()
         draw_label(original_canvas, label)
         cv2.imshow("original", original_canvas)

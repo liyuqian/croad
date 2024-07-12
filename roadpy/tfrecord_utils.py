@@ -8,8 +8,8 @@ import cv2
 import tensorflow as tf
 
 
-IMAGE_W = 640
-IMAGE_H = 360
+IMAGE_W = 480 # 640
+IMAGE_H = 270 # 360
 
 RESULT_JSON_PATH = "../data/label_result.json"
 TFRECORD_PATH = "../data/labeled_bgr.tfrecord"
@@ -32,8 +32,11 @@ def split_dataset(dataset):
     )
     return test_dataset, train_dataset
 
-def resize_image(image, width: int, height: int):
+def resize_image(image, width: int = IMAGE_W, height: int = IMAGE_H):
     old_height, old_width = image.shape[:2]
+
+    if old_height == height and old_width == width:
+        return image
 
     # find the smaller ratio
     r = min(width / float(old_width), height / float(old_height))
