@@ -8,8 +8,9 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 os.environ["KERAS_BACKEND"] = "jax"
 
 # TensorFlow needs to be imported before keras to avoid some errors.
-import tensorflow as tf
-import keras
+import tensorflow as tf  # noqa: E402
+import keras  # noqa: E402
+
 
 def convert_model_to_onnx(model_path, output_path):
     """
@@ -28,6 +29,7 @@ def convert_model_to_onnx(model_path, output_path):
     model_proto, _ = tf2onnx.convert.from_keras(
         model, input_signature=spec, output_path=output_path
     )
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

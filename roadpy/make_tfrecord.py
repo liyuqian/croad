@@ -1,8 +1,4 @@
 import os
-import pdb
-
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-
 import click
 import cv2
 import json
@@ -17,6 +13,8 @@ from tfrecord_utils import (
     RESULT_JSON_PATH,
     resize_image,
 )
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 
 def get_resized(image_path: str, width: int, height: int):

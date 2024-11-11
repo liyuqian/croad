@@ -5,9 +5,6 @@ import traceback
 
 from tfrecord_utils import draw_prediction
 
-os.environ["KERAS_BACKEND"] = "jax"
-import keras
-
 import cv2
 import grpc
 import numpy as np
@@ -17,6 +14,9 @@ import plotly.graph_objs as go
 from proto import label_pb2_grpc
 from proto import label_pb2
 
+os.environ["KERAS_BACKEND"] = "jax"
+import keras  # noqa: E402
+
 
 PNG_PATH = "/tmp/line_detection.png"
 
@@ -24,7 +24,7 @@ PNG_PATH = "/tmp/line_detection.png"
 class LineDetector(label_pb2_grpc.LineDetectorServicer):
     def DetectLines(self, request: label_pb2.LineRequest, context):
         try:
-            print(f"Detecting lines")
+            print("Detecting lines")
             return self._detect(request)
         except Exception as e:
             print(f"Error: {e}")
@@ -44,7 +44,7 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
 
     def ResetPlot(self, request: label_pb2.Empty, context):
         try:
-            print(f"Resetting plot")
+            print("Resetting plot")
             self._reset()
             return label_pb2.Empty()
         except Exception as e:
@@ -142,7 +142,7 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
         print(f"Saved {PNG_PATH}")
 
     _detector = cv2.createLineSegmentDetector()
-    _rgb: np.ndarray = None # cached RGB image for resetting plot
+    _rgb: np.ndarray = None  # cached RGB image for resetting plot
     _fig: go.Figure = None
     _modelPath: str = None
     _model: keras.Model = None

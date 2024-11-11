@@ -1,15 +1,7 @@
 import os
 import sys
 import glob
-
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-os.environ["KERAS_BACKEND"] = "jax"
-
 import cv2
-
-# TensorFlow needs to be imported before keras to avoid some errors.
-import tensorflow as tf
-import keras
 
 from tfrecord_utils import (
     IMAGE_W,
@@ -18,6 +10,13 @@ from tfrecord_utils import (
     bgr_to_rgb,
     split_dataset,
 )
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+os.environ["KERAS_BACKEND"] = "jax"
+
+# TensorFlow needs to be imported before keras to avoid some errors.
+import tensorflow as tf  # noqa: E402
+import keras  # noqa: E402
 
 IGNORE_LEFT = True
 

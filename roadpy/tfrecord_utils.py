@@ -1,18 +1,18 @@
 import math
 import os
+import cv2
 
 os.environ["KERAS_BACKEND"] = "jax"
-import keras
-
-import cv2
-import tensorflow as tf
+import keras  # noqa: E402
+import tensorflow as tf  # noqa: E402
 
 
-IMAGE_W = 480 # 640
-IMAGE_H = 270 # 360
+IMAGE_W = 480  # 640
+IMAGE_H = 270  # 360
 
 RESULT_JSON_PATH = "../data/label_result.json"
 TFRECORD_PATH = "../data/labeled_bgr.tfrecord"
+
 
 def split_dataset(dataset):
     """
@@ -31,6 +31,7 @@ def split_dataset(dataset):
         shuffled.skip(test_size).shuffle(1024, reshuffle_each_iteration=True).batch(32)
     )
     return test_dataset, train_dataset
+
 
 def resize_image(image, width: int = IMAGE_W, height: int = IMAGE_H):
     old_height, old_width = image.shape[:2]

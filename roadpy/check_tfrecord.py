@@ -1,18 +1,21 @@
 import os
 import glob
-import pdb
+import click
+import cv2
+
+from tfrecord_utils import (
+    TFRECORD_PATH,
+    draw_label,
+    draw_prediction,
+    resize_image,
+    split_dataset,
+)
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 os.environ["KERAS_BACKEND"] = "jax"
 
-import click
-import math
-import keras
-import tensorflow as tf
-import cv2
-import sys
-
-from tfrecord_utils import TFRECORD_PATH, draw_label, draw_prediction, resize_image, split_dataset
+import keras  # noqa: E402
+import tensorflow as tf  # noqa: E402
 
 
 @click.command()
