@@ -14,6 +14,15 @@ message Point {
   double y = 2;
 }
 
+message Obstacle {
+  double l = 1;     // left
+  double t = 2;     // top
+  double r = 3;     // right
+  double b = 4;     // bottom
+  string label = 5; // type
+  double confidence = 6;
+}
+
 message LineDetection {
   // (0, 0) is the top-left corner. Axis x is horizontal and y is vertical.
   repeated Line lines = 1;
@@ -21,6 +30,8 @@ message LineDetection {
   // Image width and height
   int32 width = 2;
   int32 height = 3;
+
+  repeated Obstacle obstacles = 4;
 }
 
 message ColorMapping {

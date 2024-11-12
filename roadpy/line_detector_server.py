@@ -3,6 +3,7 @@ import sys
 import os
 import traceback
 
+from obstacle import ObstacleDetector
 from tfrecord_utils import draw_prediction
 
 import cv2
@@ -21,45 +22,57 @@ import keras  # noqa: E402
 PNG_PATH = "/tmp/line_detection.png"
 
 
+def _flush_print(msg: str):
+    print(msg)
+    sys.stdout.flush()
+
+
+# TODO: rename to Detector (also in proto) since we also detect obstacles.
 class LineDetector(label_pb2_grpc.LineDetectorServicer):
+    _obstacle_detector: ObstacleDetector
+
+    def __init__(self):
+        super().__init__()
+        self._obstacle_detector = ObstacleDetector()
+
     def DetectLines(self, request: label_pb2.LineRequest, context):
         try:
-            print("Detecting lines")
+            _flush_print("Detecting lines")
             return self._detect(request)
         except Exception as e:
             print(f"Error: {e}")
-            print(traceback.format_exc())
+            _flush_print(traceback.format_exc())
             raise
 
     def Plot(self, request: label_pb2.PlotRequest, context):
         try:
             n_lines, n_points = len(request.lines), len(request.points)
-            print(f"Plotting {n_lines} lines and {n_points} points.")
+            _flush_print(f"Plotting {n_lines} lines and {n_points} points.")
             self._plot(request)
             return label_pb2.Empty()
         except Exception as e:
             print(f"Error: {e}")
-            print(traceback.format_exc())
+            _flush_print(traceback.format_exc())
             raise
 
     def ResetPlot(self, request: label_pb2.Empty, context):
         try:
-            print("Resetting plot")
+            _flush_print("Resetting plot")
             self._reset()
             return label_pb2.Empty()
         except Exception as e:
             print(f"Error: {e}")
-            print(traceback.format_exc())
+            _flush_print(traceback.format_exc())
             raise
 
     def ExportPng(self, request, context):
         try:
-            print(f"Exporting {PNG_PATH}")
+            _flush_print(f"Exporting {PNG_PATH}")
             self._savePng()
             return label_pb2.Empty()
         except Exception as e:
             print(f"Error: {e}")
-            print(traceback.format_exc())
+            _flush_print(traceback.format_exc())
             raise
 
     def _plot(self, request: label_pb2.PlotRequest):
@@ -111,6 +124,7 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
         detection = label_pb2.LineDetection(
             width=bgr.shape[1],
             height=bgr.shape[0],
+            obstacles=self._obstacle_detector.detect(rgb),
         )
 
         if not modelPath:
@@ -139,7 +153,7 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
         # Image Viewer can show this png without smoothing and auto-reload.
         with open(PNG_PATH, "wb") as f:
             f.write(self._fig.to_image(format="png"))
-        print(f"Saved {PNG_PATH}")
+        _flush_print(f"Saved {PNG_PATH}")
 
     _detector = cv2.createLineSegmentDetector()
     _rgb: np.ndarray = None  # cached RGB image for resetting plot

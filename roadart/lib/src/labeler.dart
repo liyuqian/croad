@@ -203,12 +203,25 @@ class Labeler {
   }) async {
     final stopwatch = Stopwatch()..start();
     _out.writeln('Sending request...');
-    final pb.LineDetection detection = await _client.detectLines(request);
+    late pb.LineDetection detection;
+    try {
+      detection = await _client.detectLines(request);
+    } catch (e) {
+      print('Shutdown due to errors.');
+      await shutdown();
+      rethrow;
+    }
+
     final String size = '${detection.width}x${detection.height}';
+    final List<pb.Obstacle> obstacles = detection.obstacles;
     const kDetectionProtoDump = '/tmp/line_detection.pb';
     File(kDetectionProtoDump).writeAsBytesSync(detection.writeToBuffer());
     _out.writeln('Detection: ${detection.lines.length} lines detected ($size)');
     _out.writeln('Received detection in ${stopwatch.elapsedMilliseconds}ms');
+    _out.writeln('Detected ${obstacles.length} obstacles');
+    if (obstacles.isNotEmpty) {
+      _out.writeln('First obstacle:\n${obstacles.first.toDebugString()}');
+    }
     _out.writeln('Detection proto saved to $kDetectionProtoDump');
 
     stopwatch.reset();
