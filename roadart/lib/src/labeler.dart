@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:grpc/grpc.dart';
 import 'package:path/path.dart' as p;
 import 'package:roadart/proto/label.pbgrpc.dart' as pb;
+import 'package:roadart/src/obstacle_filter.dart';
 import 'package:vector_math/vector_math_64.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -100,7 +101,7 @@ class Labeler {
     }
     _lastFilter!.adjustRightBottomX(indexDelta);
     await _client.resetPlot(pb.Empty());
-    await _plot(_lastFilter!);
+    await _plot(_lastFilter!, _lastClosest);
   }
 
   Future<void> labelVideo(
@@ -158,8 +159,14 @@ class Labeler {
     _out.writeln('Detection w/o landmarks: ${newDetection.lines.length} lines');
     _out.writeln('New detection proto saved to $kNewDetectionProtoDump');
     _out.writeln('Updated right bottom x: ${filter.rightBottomX}');
+
+    final obstacleFilter = ObstacleFilter(_out);
+    final pb.Obstacle? closest =
+        obstacleFilter.findClosestObstacle(filter.detection!);
+    _lastClosest = closest;
+
     if (plot) {
-      await _plot(filter);
+      await _plot(filter, closest);
     }
     _lastFilter = filter;
     return filter;
@@ -233,8 +240,12 @@ class Labeler {
     _out.writeln('Left bottom x: ${filter.leftBottomX}');
     _out.writeln('Processed in ${stopwatch.elapsedMilliseconds}ms');
 
+    final obstacleFilter = ObstacleFilter(_out);
+    pb.Obstacle? closest = obstacleFilter.findClosestObstacle(detection);
+    _lastClosest = closest;
+
     if (plot) {
-      await _plot(filter);
+      await _plot(filter, closest);
     }
 
     if (request.hasImagePath()) {
@@ -246,7 +257,7 @@ class Labeler {
     return filter;
   }
 
-  Future<void> _plot(LineFilter filter) async {
+  Future<void> _plot(LineFilter filter, pb.Obstacle? closestObstacle) async {
     final stopwatch = Stopwatch()..start();
     await _client.plot(pb.PlotRequest(
       points: filter.intersections.map((v) => vec2Proto(v)),
@@ -265,6 +276,17 @@ class Labeler {
         pointColor: 'red',
       ));
     }
+
+    if (closestObstacle != null) {
+      final double width = filter.detection!.width.toDouble();
+      final double height = filter.detection!.height.toDouble();
+      final double y = height * closestObstacle.b;
+      final pb.Obstacle obs = closestObstacle;
+      _out.writeln('Closest obstacle: ${obs.label} at b=${obs.b}');
+      await _client.plot(pb.PlotRequest(
+          lines: [pb.Line(x0: 0, y0: y, x1: width, y1: y)], lineColor: 'red'));
+    }
+
     await _client.exportPng(pb.Empty());
     _out.writeln('Plotted in ${stopwatch.elapsedMilliseconds}ms\n');
   }
@@ -298,4 +320,5 @@ class Labeler {
   late ClientChannel _channel;
   late pb.LineDetectorClient _client;
   LineFilter? _lastFilter;
+  pb.Obstacle? _lastClosest;
 }
