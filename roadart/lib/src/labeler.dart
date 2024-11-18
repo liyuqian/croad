@@ -166,7 +166,7 @@ class Labeler {
     _out.writeln('New detection proto saved to $kNewDetectionProtoDump');
     _out.writeln('Updated right bottom x: ${filter.rightBottomX}');
 
-    final obstacleFilter = ObstacleFilter(_out);
+    final obstacleFilter = ObstacleFilter(_out, filter);
     final pb.Obstacle? closest =
         obstacleFilter.findClosestObstacle(filter.detection!);
     _lastClosest = closest;
@@ -246,7 +246,7 @@ class Labeler {
     _out.writeln('Left bottom x: ${filter.leftBottomX}');
     _out.writeln('Processed in ${stopwatch.elapsedMilliseconds}ms');
 
-    final obstacleFilter = ObstacleFilter(_out);
+    final obstacleFilter = ObstacleFilter(_out, filter);
     pb.Obstacle? closest = obstacleFilter.findClosestObstacle(detection);
     _lastClosest = closest;
 
