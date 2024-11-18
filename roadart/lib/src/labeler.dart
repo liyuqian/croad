@@ -104,6 +104,12 @@ class Labeler {
     await _plot(_lastFilter!, _lastClosest);
   }
 
+  Future<void> resetImage() async {
+    await _client.resetPlot(pb.Empty());
+    await _client.exportPng(pb.Empty());
+    _out.writeln('Image reset.');
+  }
+
   Future<void> labelVideo(
       String videoPath, int frameIndex, String? modelPath) async {
     _lastFilter = await _handleRequest(pb.LineRequest(
@@ -282,9 +288,12 @@ class Labeler {
       final double height = filter.detection!.height.toDouble();
       final double y = height * closestObstacle.b;
       final pb.Obstacle obs = closestObstacle;
-      _out.writeln('Closest obstacle: ${obs.label} at b=${obs.b}');
+      final double w = obs.r - obs.l;
+      final double x0 = width * obs.l;
+      final double x1 = width * obs.r;
+      _out.writeln('Closest obstacle: ${obs.label} at b=${obs.b}, w=$w');
       await _client.plot(pb.PlotRequest(
-          lines: [pb.Line(x0: 0, y0: y, x1: width, y1: y)], lineColor: 'red'));
+          lines: [pb.Line(x0: x0, y0: y, x1: x1, y1: y)], lineColor: 'red'));
     }
 
     await _client.exportPng(pb.Empty());

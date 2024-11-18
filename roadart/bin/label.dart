@@ -103,6 +103,8 @@ Future<void> listenKeyForVideo(String videoPath, int frameIndex,
       await labeler.adjustRight(1);
     } else if (key == 'u') {
       await labeler.adjustRight(-1);
+    } else if (key == 'r') {
+      await labeler.resetImage();
     } else {
       print('Unknown key: $key');
     }

@@ -26,7 +26,6 @@ class ObstacleFilter {
       if (obstacle.b >= 1.0 - kInvalidBottomRatio) {
         continue;
       }
-      // TODO NEXT: filter ego vehicle (large b and center (l, r))
       if (closest == null || closest.b < obstacle.b) {
         closest = obstacle;
       }
