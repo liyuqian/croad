@@ -25,6 +25,9 @@ class LabelResult with _$LabelResult {
     required double yRatio, // vashing (road direction) at y = yRatio * height
     required double leftRatio, // leftRatio * (pi / 2) from vertical
     required double rightRatio, // rightRatio * (pi / 2) from vertical
+    required double yRatioObstacleMax, // obs bottom at this ratio * height
+    required double xRatioObstacleMin, // obs left at this ratio * width
+    required double xRatioObstacleMax, // obs right at this ratio * width
   }) = _LabelResult;
 
   factory LabelResult.fromJson(Map<String, Object?> json) =>
@@ -207,6 +210,9 @@ class Labeler {
       yRatio: c.y / h,
       leftRatio: leftAngle / (pi / 2),
       rightRatio: rightAngle / (pi / 2),
+      yRatioObstacleMax: _lastClosest?.b ?? 0.0,
+      xRatioObstacleMin: _lastClosest?.l ?? 0.0,
+      xRatioObstacleMax: _lastClosest?.r ?? 0.0,
     );
   }
 
