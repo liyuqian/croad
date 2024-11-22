@@ -38,11 +38,11 @@ class ObstacleFilter {
       }
       if (vanishingPoint != null && rightBottomX != null) {
         final bottomRight = Vector2(rightBottomX!, detection.height.toDouble());
-        final Vector2 road2v = vanishingPoint! - bottomRight;
+        final Vector2 v2road = bottomRight - vanishingPoint!;
         final obsBottomLeft = Vector2(
             obstacle.l * detection.width, obstacle.b * detection.height);
-        final Vector2 obs2v = vanishingPoint! - obsBottomLeft;
-        if (obs2v.cross(road2v) < 0) {
+        final Vector2 v2obs = obsBottomLeft - vanishingPoint!;
+        if (v2obs.cross(v2road) > 0) {
           _out.writeln('Ignore outside ${obstacle.label} at $obsBottomLeft');
           continue;
         }
