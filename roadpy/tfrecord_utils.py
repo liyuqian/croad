@@ -7,8 +7,8 @@ import keras  # noqa: E402
 import tensorflow as tf  # noqa: E402
 
 
-IMAGE_W = 480  # 640
-IMAGE_H = 270  # 360
+IMAGE_W = 320  # 640
+IMAGE_H = 240  # 360
 
 RESULT_JSON_PATH = "../data/label_result.json"
 TFRECORD_PATH = "../data/labeled_bgr.tfrecord"

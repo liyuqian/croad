@@ -87,7 +87,7 @@ class Labeler {
       _out.writeln('No filter to export label');
       return;
     }
-    final LabelResult? result = _makeResult(_lastFilter!);
+    final LabelResult? result = _makeResult(_lastFilter!, _lastClosest);
     if (result == null) {
       _out.writeln('Failed to generate label.');
       return;
@@ -135,14 +135,27 @@ class Labeler {
 
   Future<LabelResult?> labelCommaImage(String imagePath) async {
     final String maskPath = imagePath.replaceAll('imgs', 'masks');
-    final LineFilter processed = await labelCommaMask(maskPath, plot: false);
-    final LabelResult? result = _makeResult(processed);
-    if (result != null) {
+    final LineFilter maskLabel = await labelCommaMask(maskPath, plot: false);
+
+    // Call labelGeneral after labelCommaMask so _lastClosest is set.
+    await labelGeneral(imagePath, null, plot: false);
+
+    final LabelResult? maskResult = _makeResult(maskLabel, _lastClosest);
+    if (maskResult != null) {
+      final result = LabelResult(
+          imagePath: imagePath,
+          xRatio: maskResult.xRatio,
+          yRatio: maskResult.yRatio,
+          leftRatio: maskResult.leftRatio,
+          rightRatio: maskResult.rightRatio,
+          yRatioObstacleMax: maskResult.yRatioObstacleMax,
+          xRatioObstacleMin: maskResult.xRatioObstacleMin,
+          xRatioObstacleMax: maskResult.xRatioObstacleMax);
       final jsonStr = JsonEncoder.withIndent('  ').convert(result.toJson());
       _out.writeln('Label result: $jsonStr\n');
+      return result;
     }
-    _lastFilter = processed;
-    return result;
+    return null;
   }
 
   Future<LineFilter> labelCommaMask(String maskPath, {bool plot = true}) async {
@@ -193,26 +206,26 @@ class Labeler {
     return _lastFilter!;
   }
 
-  LabelResult? _makeResult(LineFilter processed) {
-    if (processed.guessedPoint == null ||
-        processed.leftBottomX == null ||
-        processed.rightBottomX == null) {
+  static LabelResult? _makeResult(LineFilter line, pb.Obstacle? obs) {
+    if (line.guessedPoint == null ||
+        line.leftBottomX == null ||
+        line.rightBottomX == null) {
       return null;
     }
-    final Vector2 c = processed.guessedPoint!;
-    final int h = processed.detection!.height;
-    final int w = processed.detection!.width;
-    final double leftAngle = atan((c.x - processed.leftBottomX!) / (h - c.y));
-    final double rightAngle = atan((processed.rightBottomX! - c.x) / (h - c.y));
+    final Vector2 c = line.guessedPoint!;
+    final int h = line.detection!.height;
+    final int w = line.detection!.width;
+    final double leftAngle = atan((c.x - line.leftBottomX!) / (h - c.y));
+    final double rightAngle = atan((line.rightBottomX! - c.x) / (h - c.y));
     return LabelResult(
-      imagePath: processed.debugImagePath,
+      imagePath: line.debugImagePath,
       xRatio: c.x / w,
       yRatio: c.y / h,
       leftRatio: leftAngle / (pi / 2),
       rightRatio: rightAngle / (pi / 2),
-      yRatioObstacleMax: _lastClosest?.b ?? 0.0,
-      xRatioObstacleMin: _lastClosest?.l ?? 0.0,
-      xRatioObstacleMax: _lastClosest?.r ?? 0.0,
+      yRatioObstacleMax: obs?.b ?? 0.0,
+      xRatioObstacleMin: obs?.l ?? 0.0,
+      xRatioObstacleMax: obs?.r ?? 0.0,
     );
   }
 
