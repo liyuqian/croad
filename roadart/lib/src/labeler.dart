@@ -137,8 +137,10 @@ class Labeler {
     final String maskPath = imagePath.replaceAll('imgs', 'masks');
     final LineFilter maskLabel = await labelCommaMask(maskPath, plot: false);
 
-    // Call labelGeneral after labelCommaMask so _lastClosest is set.
-    await labelGeneral(imagePath, null, plot: false);
+    // Find the closest obstacle using detections from the original image.
+    final LineFilter label = await labelGeneral(imagePath, null, plot: false);
+    final obstacleFilter = ObstacleFilter(_out, maskLabel);
+    _lastClosest = obstacleFilter.findClosestObstacle(label.detection!);
 
     final LabelResult? maskResult = _makeResult(maskLabel, _lastClosest);
     if (maskResult != null) {
