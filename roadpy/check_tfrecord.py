@@ -66,7 +66,9 @@ def check_tfrecord(
             cv2.imshow("test", draw_prediction(model, image_bgr))
 
         print()
-        cv2.waitKey(0)
+        key = cv2.waitKey(0)
+        if key == ord("q"):
+            break
 
 
 if __name__ == "__main__":
