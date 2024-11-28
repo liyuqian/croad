@@ -29,11 +29,15 @@ mixin _$LabelResult {
       throw _privateConstructorUsedError; // leftRatio * (pi / 2) from vertical
   double get rightRatio =>
       throw _privateConstructorUsedError; // rightRatio * (pi / 2) from vertical
+  double get yRatioObstacleMin =>
+      throw _privateConstructorUsedError; // obs top at this ratio * height
   double get yRatioObstacleMax =>
       throw _privateConstructorUsedError; // obs bottom at this ratio * height
   double get xRatioObstacleMin =>
       throw _privateConstructorUsedError; // obs left at this ratio * width
-  double get xRatioObstacleMax => throw _privateConstructorUsedError;
+  double get xRatioObstacleMax =>
+      throw _privateConstructorUsedError; // obs right at this ratio * width
+  double get obstacleConfidence => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -53,9 +57,11 @@ abstract class $LabelResultCopyWith<$Res> {
       double yRatio,
       double leftRatio,
       double rightRatio,
+      double yRatioObstacleMin,
       double yRatioObstacleMax,
       double xRatioObstacleMin,
-      double xRatioObstacleMax});
+      double xRatioObstacleMax,
+      double obstacleConfidence});
 }
 
 /// @nodoc
@@ -76,9 +82,11 @@ class _$LabelResultCopyWithImpl<$Res, $Val extends LabelResult>
     Object? yRatio = null,
     Object? leftRatio = null,
     Object? rightRatio = null,
+    Object? yRatioObstacleMin = null,
     Object? yRatioObstacleMax = null,
     Object? xRatioObstacleMin = null,
     Object? xRatioObstacleMax = null,
+    Object? obstacleConfidence = null,
   }) {
     return _then(_value.copyWith(
       imagePath: null == imagePath
@@ -101,6 +109,10 @@ class _$LabelResultCopyWithImpl<$Res, $Val extends LabelResult>
           ? _value.rightRatio
           : rightRatio // ignore: cast_nullable_to_non_nullable
               as double,
+      yRatioObstacleMin: null == yRatioObstacleMin
+          ? _value.yRatioObstacleMin
+          : yRatioObstacleMin // ignore: cast_nullable_to_non_nullable
+              as double,
       yRatioObstacleMax: null == yRatioObstacleMax
           ? _value.yRatioObstacleMax
           : yRatioObstacleMax // ignore: cast_nullable_to_non_nullable
@@ -112,6 +124,10 @@ class _$LabelResultCopyWithImpl<$Res, $Val extends LabelResult>
       xRatioObstacleMax: null == xRatioObstacleMax
           ? _value.xRatioObstacleMax
           : xRatioObstacleMax // ignore: cast_nullable_to_non_nullable
+              as double,
+      obstacleConfidence: null == obstacleConfidence
+          ? _value.obstacleConfidence
+          : obstacleConfidence // ignore: cast_nullable_to_non_nullable
               as double,
     ) as $Val);
   }
@@ -131,9 +147,11 @@ abstract class _$$LabelResultImplCopyWith<$Res>
       double yRatio,
       double leftRatio,
       double rightRatio,
+      double yRatioObstacleMin,
       double yRatioObstacleMax,
       double xRatioObstacleMin,
-      double xRatioObstacleMax});
+      double xRatioObstacleMax,
+      double obstacleConfidence});
 }
 
 /// @nodoc
@@ -152,9 +170,11 @@ class __$$LabelResultImplCopyWithImpl<$Res>
     Object? yRatio = null,
     Object? leftRatio = null,
     Object? rightRatio = null,
+    Object? yRatioObstacleMin = null,
     Object? yRatioObstacleMax = null,
     Object? xRatioObstacleMin = null,
     Object? xRatioObstacleMax = null,
+    Object? obstacleConfidence = null,
   }) {
     return _then(_$LabelResultImpl(
       imagePath: null == imagePath
@@ -177,6 +197,10 @@ class __$$LabelResultImplCopyWithImpl<$Res>
           ? _value.rightRatio
           : rightRatio // ignore: cast_nullable_to_non_nullable
               as double,
+      yRatioObstacleMin: null == yRatioObstacleMin
+          ? _value.yRatioObstacleMin
+          : yRatioObstacleMin // ignore: cast_nullable_to_non_nullable
+              as double,
       yRatioObstacleMax: null == yRatioObstacleMax
           ? _value.yRatioObstacleMax
           : yRatioObstacleMax // ignore: cast_nullable_to_non_nullable
@@ -188,6 +212,10 @@ class __$$LabelResultImplCopyWithImpl<$Res>
       xRatioObstacleMax: null == xRatioObstacleMax
           ? _value.xRatioObstacleMax
           : xRatioObstacleMax // ignore: cast_nullable_to_non_nullable
+              as double,
+      obstacleConfidence: null == obstacleConfidence
+          ? _value.obstacleConfidence
+          : obstacleConfidence // ignore: cast_nullable_to_non_nullable
               as double,
     ));
   }
@@ -202,9 +230,11 @@ class _$LabelResultImpl implements _LabelResult {
       required this.yRatio,
       required this.leftRatio,
       required this.rightRatio,
+      required this.yRatioObstacleMin,
       required this.yRatioObstacleMax,
       required this.xRatioObstacleMin,
-      required this.xRatioObstacleMax});
+      required this.xRatioObstacleMax,
+      required this.obstacleConfidence});
 
   factory _$LabelResultImpl.fromJson(Map<String, dynamic> json) =>
       _$$LabelResultImplFromJson(json);
@@ -224,6 +254,9 @@ class _$LabelResultImpl implements _LabelResult {
   final double rightRatio;
 // rightRatio * (pi / 2) from vertical
   @override
+  final double yRatioObstacleMin;
+// obs top at this ratio * height
+  @override
   final double yRatioObstacleMax;
 // obs bottom at this ratio * height
   @override
@@ -231,10 +264,13 @@ class _$LabelResultImpl implements _LabelResult {
 // obs left at this ratio * width
   @override
   final double xRatioObstacleMax;
+// obs right at this ratio * width
+  @override
+  final double obstacleConfidence;
 
   @override
   String toString() {
-    return 'LabelResult(imagePath: $imagePath, xRatio: $xRatio, yRatio: $yRatio, leftRatio: $leftRatio, rightRatio: $rightRatio, yRatioObstacleMax: $yRatioObstacleMax, xRatioObstacleMin: $xRatioObstacleMin, xRatioObstacleMax: $xRatioObstacleMax)';
+    return 'LabelResult(imagePath: $imagePath, xRatio: $xRatio, yRatio: $yRatio, leftRatio: $leftRatio, rightRatio: $rightRatio, yRatioObstacleMin: $yRatioObstacleMin, yRatioObstacleMax: $yRatioObstacleMax, xRatioObstacleMin: $xRatioObstacleMin, xRatioObstacleMax: $xRatioObstacleMax, obstacleConfidence: $obstacleConfidence)';
   }
 
   @override
@@ -250,12 +286,16 @@ class _$LabelResultImpl implements _LabelResult {
                 other.leftRatio == leftRatio) &&
             (identical(other.rightRatio, rightRatio) ||
                 other.rightRatio == rightRatio) &&
+            (identical(other.yRatioObstacleMin, yRatioObstacleMin) ||
+                other.yRatioObstacleMin == yRatioObstacleMin) &&
             (identical(other.yRatioObstacleMax, yRatioObstacleMax) ||
                 other.yRatioObstacleMax == yRatioObstacleMax) &&
             (identical(other.xRatioObstacleMin, xRatioObstacleMin) ||
                 other.xRatioObstacleMin == xRatioObstacleMin) &&
             (identical(other.xRatioObstacleMax, xRatioObstacleMax) ||
-                other.xRatioObstacleMax == xRatioObstacleMax));
+                other.xRatioObstacleMax == xRatioObstacleMax) &&
+            (identical(other.obstacleConfidence, obstacleConfidence) ||
+                other.obstacleConfidence == obstacleConfidence));
   }
 
   @JsonKey(ignore: true)
@@ -267,9 +307,11 @@ class _$LabelResultImpl implements _LabelResult {
       yRatio,
       leftRatio,
       rightRatio,
+      yRatioObstacleMin,
       yRatioObstacleMax,
       xRatioObstacleMin,
-      xRatioObstacleMax);
+      xRatioObstacleMax,
+      obstacleConfidence);
 
   @JsonKey(ignore: true)
   @override
@@ -292,9 +334,11 @@ abstract class _LabelResult implements LabelResult {
       required final double yRatio,
       required final double leftRatio,
       required final double rightRatio,
+      required final double yRatioObstacleMin,
       required final double yRatioObstacleMax,
       required final double xRatioObstacleMin,
-      required final double xRatioObstacleMax}) = _$LabelResultImpl;
+      required final double xRatioObstacleMax,
+      required final double obstacleConfidence}) = _$LabelResultImpl;
 
   factory _LabelResult.fromJson(Map<String, dynamic> json) =
       _$LabelResultImpl.fromJson;
@@ -310,11 +354,15 @@ abstract class _LabelResult implements LabelResult {
   @override // leftRatio * (pi / 2) from vertical
   double get rightRatio;
   @override // rightRatio * (pi / 2) from vertical
+  double get yRatioObstacleMin;
+  @override // obs top at this ratio * height
   double get yRatioObstacleMax;
   @override // obs bottom at this ratio * height
   double get xRatioObstacleMin;
   @override // obs left at this ratio * width
   double get xRatioObstacleMax;
+  @override // obs right at this ratio * width
+  double get obstacleConfidence;
   @override
   @JsonKey(ignore: true)
   _$$LabelResultImplCopyWith<_$LabelResultImpl> get copyWith =>

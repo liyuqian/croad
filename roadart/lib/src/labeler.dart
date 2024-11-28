@@ -25,9 +25,11 @@ class LabelResult with _$LabelResult {
     required double yRatio, // vashing (road direction) at y = yRatio * height
     required double leftRatio, // leftRatio * (pi / 2) from vertical
     required double rightRatio, // rightRatio * (pi / 2) from vertical
+    required double yRatioObstacleMin, // obs top at this ratio * height
     required double yRatioObstacleMax, // obs bottom at this ratio * height
     required double xRatioObstacleMin, // obs left at this ratio * width
     required double xRatioObstacleMax, // obs right at this ratio * width
+    required double obstacleConfidence, // 0 to 1
   }) = _LabelResult;
 
   factory LabelResult.fromJson(Map<String, Object?> json) =>
@@ -144,15 +146,7 @@ class Labeler {
 
     final LabelResult? maskResult = _makeResult(maskLabel, _lastClosest);
     if (maskResult != null) {
-      final result = LabelResult(
-          imagePath: imagePath,
-          xRatio: maskResult.xRatio,
-          yRatio: maskResult.yRatio,
-          leftRatio: maskResult.leftRatio,
-          rightRatio: maskResult.rightRatio,
-          yRatioObstacleMax: maskResult.yRatioObstacleMax,
-          xRatioObstacleMin: maskResult.xRatioObstacleMin,
-          xRatioObstacleMax: maskResult.xRatioObstacleMax);
+      final result = maskResult.copyWith(imagePath: imagePath);
       final jsonStr = JsonEncoder.withIndent('  ').convert(result.toJson());
       _out.writeln('Label result: $jsonStr\n');
       return result;
@@ -225,9 +219,11 @@ class Labeler {
       yRatio: c.y / h,
       leftRatio: leftAngle / (pi / 2),
       rightRatio: rightAngle / (pi / 2),
+      yRatioObstacleMin: obs?.t ?? 0.0,
       yRatioObstacleMax: obs?.b ?? 0.0,
       xRatioObstacleMin: obs?.l ?? 0.0,
       xRatioObstacleMax: obs?.r ?? 0.0,
+      obstacleConfidence: obs?.confidence ?? 0.0,
     );
   }
 

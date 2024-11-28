@@ -13,9 +13,11 @@ _$LabelResultImpl _$$LabelResultImplFromJson(Map<String, dynamic> json) =>
       yRatio: (json['yRatio'] as num).toDouble(),
       leftRatio: (json['leftRatio'] as num).toDouble(),
       rightRatio: (json['rightRatio'] as num).toDouble(),
+      yRatioObstacleMin: (json['yRatioObstacleMin'] as num).toDouble(),
       yRatioObstacleMax: (json['yRatioObstacleMax'] as num).toDouble(),
       xRatioObstacleMin: (json['xRatioObstacleMin'] as num).toDouble(),
       xRatioObstacleMax: (json['xRatioObstacleMax'] as num).toDouble(),
+      obstacleConfidence: (json['obstacleConfidence'] as num).toDouble(),
     );
 
 Map<String, dynamic> _$$LabelResultImplToJson(_$LabelResultImpl instance) =>
@@ -25,7 +27,9 @@ Map<String, dynamic> _$$LabelResultImplToJson(_$LabelResultImpl instance) =>
       'yRatio': instance.yRatio,
       'leftRatio': instance.leftRatio,
       'rightRatio': instance.rightRatio,
+      'yRatioObstacleMin': instance.yRatioObstacleMin,
       'yRatioObstacleMax': instance.yRatioObstacleMax,
       'xRatioObstacleMin': instance.xRatioObstacleMin,
       'xRatioObstacleMax': instance.xRatioObstacleMax,
+      'obstacleConfidence': instance.obstacleConfidence,
     };
