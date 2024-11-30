@@ -1,0 +1,11 @@
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[project]
+name = "roadpy"
+version = "0.0.1"
+dependencies = [
+  "wget",
+  "segment-anything @ git+https://github.com/facebookresearch/segment-anything.git",
+]
