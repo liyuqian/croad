@@ -66,3 +66,12 @@ service LineDetector {
   rpc ExportPng(Empty) returns (Empty);
   rpc ResetPlot(Empty) returns (Empty);
 }
+
+message SegmentRequest {
+  string input_path = 1;
+  string output_path = 2;
+}
+
+service Segmenter {
+  rpc Segment(SegmentRequest) returns (Empty);
+}

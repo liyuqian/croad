@@ -57,29 +57,29 @@ class Labeler {
     final String binPath = p.dirname(Platform.script.path);
     final String root = Directory(binPath).parent.parent.path;
     final String roadpy = p.join(root, 'roadpy');
-    _serverProcess = await Process.start(
-        'environment/bin/python', ['line_detector_server.py'],
+    _lineServer = await Process.start(
+        'environment/bin/python', ['server/line_detector_server.py'],
         workingDirectory: roadpy);
-    final String prefix = '/tmp/line_detector_server_${_serverProcess!.pid}';
+    final String prefix = '/tmp/line_detector_server_${_lineServer!.pid}';
     final String outPath = '$prefix.out';
     final String errPath = '$prefix.err';
     _serverOut = File(outPath).openWrite();
     _serverErr = File(errPath).openWrite();
-    _serverProcess!.stdout.pipe(_serverOut!);
-    _serverProcess!.stderr.pipe(_serverErr!);
+    _lineServer!.stdout.pipe(_serverOut!);
+    _lineServer!.stderr.pipe(_serverErr!);
     _out.writeln('Waiting for server to start...');
     while (!File(outPath).existsSync() ||
         !File(outPath).readAsStringSync().contains('started')) {
       await Future.delayed(const Duration(milliseconds: 100));
     }
     _out.writeln('Server started, logs: $outPath, $errPath');
-    return _serverProcess!.pid;
+    return _lineServer!.pid;
   }
 
   Future<void> shutdown() async {
     await _channel.shutdown();
-    _serverProcess!.kill();
-    await _serverProcess!.exitCode;
+    _lineServer!.kill();
+    await _lineServer!.exitCode;
     await _serverOut!.close();
     await _serverErr!.close();
   }
@@ -342,7 +342,7 @@ class Labeler {
   }
 
   IOSink? _serverOut, _serverErr;
-  Process? _serverProcess;
+  Process? _lineServer;
   late ClientChannel _channel;
   late pb.LineDetectorClient _client;
   LineFilter? _lastFilter;

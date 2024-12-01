@@ -1,5 +1,9 @@
-from typing import Any, Dict, List
+from concurrent import futures
+import os
+import traceback
+from typing import List
 import cv2
+import grpc
 import numpy as np
 import sys
 import torch
@@ -9,14 +13,17 @@ import logging
 from pathlib import Path
 from segment_anything import SamAutomaticMaskGenerator, SamPredictor, sam_model_registry
 
+from proto import label_pb2, label_pb2_grpc
+from server.server_utils import flush_print
+
 BOTTOM_RATIO = 1.0 - 80.0 / 360
 
-class SamDetector:
+class SamDetector(label_pb2_grpc.Segmenter):
     _mask_generator: SamAutomaticMaskGenerator
     _predictor: SamPredictor
 
     def __init__(self):
-        model_path = Path(__file__).parent / "ignore" / "sam_vit_h_4b8939.pth"
+        model_path = Path(__file__).parent.parent / "ignore" / "sam_vit_h_4b8939.pth"
         if not model_path.exists():
             model_url = (
                 "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
@@ -65,8 +72,18 @@ class SamDetector:
         cv2.imwrite(output_path, mask)
         logging.info("Done.")
 
+    def Segment(self, request: label_pb2.SegmentRequest, context):
+        try:
+            flush_print('Received segment request.')
+            self.detect_and_save(request.input_path, request.output_path)
+            flush_print('Finished segment request.')
+        except Exception as e:
+            print(f'Error: {e}')
+            flush_print(traceback.format_exc())
+            raise
 
-# TODO: implement the proto server so the labeler can use it.
+
+
 def main():
     logging.basicConfig(
         level=logging.INFO,
@@ -75,7 +92,15 @@ def main():
     )
     logging.info("Initializing SamDetector...")
     detector = SamDetector()
-    detector.detect_and_save(sys.argv[1], "/tmp/segment.png")
+    logging.info("SamDetector initialized.")
+
+    pid = os.getpid()
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
+    label_pb2_grpc.add_SegmenterServicer_to_server(detector, server)
+    server.add_insecure_port(f"unix:///tmp/segmenter_{pid}.sock")
+    server.start()
+    flush_print(f"Server started with pid {pid}")
+    server.wait_for_termination()
 
 
 if __name__ == "__main__":
