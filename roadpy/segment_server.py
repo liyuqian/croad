@@ -37,22 +37,33 @@ class SamDetector:
             overlay[mask]= color
         return overlay
 
-    def detect_all(self, image: np.ndarray):
+    def detect_all(self, image: np.ndarray) -> np.ndarray:
         masks = self._mask_generator.generate(image)
         return self._generate_overlay(image, [mask['segmentation'] for mask in masks])
 
-    def detect_one(self, image: np.ndarray, point: np.ndarray):
+    def detect_one(self, image: np.ndarray, point: np.ndarray) -> np.ndarray:
         self._predictor.set_image(image)
         masks, _, _ = self._predictor.predict(point.reshape(1, 2), [1])
         masks = [masks[i] for i in range(masks.shape[0])]
         return self._generate_overlay(image, masks)
 
-    def detect_one_from_all(self, image: np.ndarray, point: np.ndarray):
+    def detect_one_from_all(self, image: np.ndarray, point: np.ndarray) -> np.ndarray:
         masks = self._mask_generator.generate(image)
         masks = [mask['segmentation'] for mask in masks]
         r, c = point.astype(int)
         masks = [mask for mask in masks if mask[r][c]]
         return self._generate_overlay(image, masks)
+
+    def detect_and_save(self, input_path: str, output_path: str) -> None:
+        # Read an image using cv2 into RGB
+        image = cv2.imread(sys.argv[1])
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        logging.info("Segmenting...")
+        point = np.multiply(image.shape[0:2], [BOTTOM_RATIO, 0.5])
+        mask = self.detect_one_from_all(image, point)
+        cv2.imwrite(output_path, mask)
+        logging.info("Done.")
 
 
 # TODO: implement the proto server so the labeler can use it.
@@ -64,19 +75,7 @@ def main():
     )
     logging.info("Initializing SamDetector...")
     detector = SamDetector()
-
-    # Read an image using cv2 into RGB
-    image = cv2.imread(sys.argv[1])
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-    logging.info("Segmenting...")
-    # mask = detector.detect_all(image)
-    point = np.multiply(image.shape[0:2], [BOTTOM_RATIO, 0.5])
-    mask = detector.detect_one_from_all(image, point)
-    logging.info("Done.")
-
-    # Save mask into /tmp/segment.png
-    cv2.imwrite("/tmp/segment.png", mask)
+    detector.detect_and_save(sys.argv[1], "/tmp/segment.png")
 
 
 if __name__ == "__main__":
