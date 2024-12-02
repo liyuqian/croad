@@ -19,7 +19,7 @@ class ObstacleDetector:
         self._processor = DetrImageProcessor.from_pretrained(DETR_MODEL_PATH, **kwargs)
         self._model = DetrForObjectDetection.from_pretrained(DETR_MODEL_PATH, **kwargs)
         self._device = "cpu"
-        if torch.backends.cudnn.is_available():
+        if torch.cuda.is_available():
             self._device = "cuda"
         elif torch.backends.mps.is_available():
             self._device = "mps"

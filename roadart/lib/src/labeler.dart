@@ -2,8 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:grpc/grpc.dart';
-import 'package:path/path.dart' as p;
 import 'package:roadart/proto/label.pbgrpc.dart' as pb;
 import 'package:roadart/src/obstacle_filter.dart';
 import 'package:vector_math/vector_math_64.dart';
@@ -11,6 +9,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'label_set.dart';
 import 'line_filter.dart';
+import 'server_process.dart';
 
 part 'labeler.freezed.dart';
 part 'labeler.g.dart';
@@ -42,46 +41,20 @@ class Labeler {
   final IOSink _out;
 
   Future<void> start() async {
-    final int serverPid = await _startServer();
-    final udsAddress = InternetAddress('/tmp/line_detection_$serverPid.sock',
-        type: InternetAddressType.unix);
-    _channel = ClientChannel(
-      udsAddress,
-      options: const ChannelOptions(credentials: ChannelCredentials.insecure()),
-    );
-    _client = pb.LineDetectorClient(_channel);
+    _lineServer = ServerProcess('line_detector_server', out: _out);
+    await _lineServer!.start();
+    _lineClient = pb.LineDetectorClient(_lineServer!.channel);
   }
 
-  // Returns server's pid
-  Future<int> _startServer() async {
-    final String binPath = p.dirname(Platform.script.path);
-    final String root = Directory(binPath).parent.parent.path;
-    final String roadpy = p.join(root, 'roadpy');
-    _lineServer = await Process.start(
-        'environment/bin/python', ['server/line_detector_server.py'],
-        workingDirectory: roadpy);
-    final String prefix = '/tmp/line_detector_server_${_lineServer!.pid}';
-    final String outPath = '$prefix.out';
-    final String errPath = '$prefix.err';
-    _serverOut = File(outPath).openWrite();
-    _serverErr = File(errPath).openWrite();
-    _lineServer!.stdout.pipe(_serverOut!);
-    _lineServer!.stderr.pipe(_serverErr!);
-    _out.writeln('Waiting for server to start...');
-    while (!File(outPath).existsSync() ||
-        !File(outPath).readAsStringSync().contains('started')) {
-      await Future.delayed(const Duration(milliseconds: 100));
-    }
-    _out.writeln('Server started, logs: $outPath, $errPath');
-    return _lineServer!.pid;
+  Future<void> _startSegmentServer() async {
+    _segmentServer = ServerProcess('segment_server', out: _out);
+    await _segmentServer!.start();
+    _segmentClient = pb.SegmenterClient(_segmentServer!.channel);
   }
 
   Future<void> shutdown() async {
-    await _channel.shutdown();
-    _lineServer!.kill();
-    await _lineServer!.exitCode;
-    await _serverOut!.close();
-    await _serverErr!.close();
+    await _lineServer?.shutdown();
+    await _segmentServer?.shutdown();
   }
 
   Future<void> exportLabel(LabelSet labelSet) async {
@@ -105,13 +78,13 @@ class Labeler {
       return;
     }
     _lastFilter!.adjustRightBottomX(indexDelta);
-    await _client.resetPlot(pb.Empty());
+    await _lineClient.resetPlot(pb.Empty());
     await _plot(_lastFilter!, _lastClosest);
   }
 
   Future<void> resetImage() async {
-    await _client.resetPlot(pb.Empty());
-    await _client.exportPng(pb.Empty());
+    await _lineClient.resetPlot(pb.Empty());
+    await _lineClient.exportPng(pb.Empty());
     _out.writeln('Image reset.');
   }
 
@@ -119,6 +92,22 @@ class Labeler {
       String videoPath, int frameIndex, String? modelPath) async {
     _lastFilter = await _handleRequest(pb.LineRequest(
         videoPath: videoPath, frameIndex: frameIndex, modelPath: modelPath));
+  }
+
+  Future<LabelResult?> labelVideoWithSam(
+      String videoPath, int frameIndex, String? modelPath) async {
+    if (_segmentServer == null) {
+      await _startSegmentServer();
+    }
+    const String kSegmentPath = '/tmp/segment.png';
+    await _segmentClient.segment(pb.SegmentRequest(
+        videoPath: videoPath,
+        frameIndex: frameIndex,
+        outputPath: kSegmentPath));
+    final LineFilter maskLabel = await labelGeneral(kSegmentPath, modelPath);
+    final LineFilter label = await _handleRequest(pb.LineRequest(
+        videoPath: videoPath, frameIndex: frameIndex, modelPath: modelPath));
+    return await labelAfterMask(maskLabel, label);
   }
 
   Future<LabelResult?> labelImage(String imagePath, String? modelPath) async {
@@ -138,15 +127,19 @@ class Labeler {
   Future<LabelResult?> labelCommaImage(String imagePath) async {
     final String maskPath = imagePath.replaceAll('imgs', 'masks');
     final LineFilter maskLabel = await labelCommaMask(maskPath, plot: false);
-
     // Find the closest obstacle using detections from the original image.
     final LineFilter label = await labelGeneral(imagePath, null, plot: false);
+    return await labelAfterMask(maskLabel, label);
+  }
+
+  Future<LabelResult?> labelAfterMask(
+      LineFilter maskLabel, LineFilter label) async {
     final obstacleFilter = ObstacleFilter(_out, maskLabel);
     _lastClosest = obstacleFilter.findClosestObstacle(label.detection!);
 
     final LabelResult? maskResult = _makeResult(maskLabel, _lastClosest);
     if (maskResult != null) {
-      final result = maskResult.copyWith(imagePath: imagePath);
+      final result = maskResult.copyWith(imagePath: label.debugImagePath);
       final jsonStr = JsonEncoder.withIndent('  ').convert(result.toJson());
       _out.writeln('Label result: $jsonStr\n');
       return result;
@@ -170,7 +163,8 @@ class Labeler {
     // lane marking to road). This helps detecting road boundaries.
     request.colorMappings
         .add(pb.ColorMapping(fromHex: '#ff0000', toHex: '#402020'));
-    final pb.LineDetection newDetection = await _client.detectLines(request);
+    final pb.LineDetection newDetection =
+        await _lineClient.detectLines(request);
     filter.refreshRightBottomX(newDetection);
     const kNewDetectionProtoDump = '/tmp/new_line_detection.pb';
     File(kNewDetectionProtoDump).writeAsBytesSync(newDetection.writeToBuffer());
@@ -178,13 +172,8 @@ class Labeler {
     _out.writeln('New detection proto saved to $kNewDetectionProtoDump');
     _out.writeln('Updated right bottom x: ${filter.rightBottomX}');
 
-    final obstacleFilter = ObstacleFilter(_out, filter);
-    final pb.Obstacle? closest =
-        obstacleFilter.findClosestObstacle(filter.detection!);
-    _lastClosest = closest;
-
     if (plot) {
-      await _plot(filter, closest);
+      await _plot(filter, null);
     }
     _lastFilter = filter;
     return filter;
@@ -235,7 +224,7 @@ class Labeler {
     _out.writeln('Sending request...');
     late pb.LineDetection detection;
     try {
-      detection = await _client.detectLines(request);
+      detection = await _lineClient.detectLines(request);
     } catch (e) {
       print('Shutdown due to errors.');
       await shutdown();
@@ -282,19 +271,19 @@ class Labeler {
 
   Future<void> _plot(LineFilter filter, pb.Obstacle? closestObstacle) async {
     final stopwatch = Stopwatch()..start();
-    await _client.plot(pb.PlotRequest(
+    await _lineClient.plot(pb.PlotRequest(
       points: filter.intersections.map((v) => vec2Proto(v)),
       pointColor: 'blue',
       lines: _computeBoundaries(filter),
       lineColor: 'blue',
     ));
-    await _client.plot(pb.PlotRequest(
+    await _lineClient.plot(pb.PlotRequest(
         lines: filter.rightLines.map((l) => l.pbLine), lineColor: 'yellow'));
-    await _client.plot(pb.PlotRequest(
+    await _lineClient.plot(pb.PlotRequest(
         lines: filter.leftLines.map((l) => l.pbLine), lineColor: 'green'));
     if (filter.guessedPoint != null) {
       _out.writeln('Guessed point: ${filter.guessedPoint}');
-      await _client.plot(pb.PlotRequest(
+      await _lineClient.plot(pb.PlotRequest(
         points: [vec2Proto(filter.guessedPoint!)],
         pointColor: 'red',
       ));
@@ -309,11 +298,11 @@ class Labeler {
       final double x0 = width * obs.l;
       final double x1 = width * obs.r;
       _out.writeln('Closest obstacle: ${obs.label} at b=${obs.b}, w=$w');
-      await _client.plot(pb.PlotRequest(
+      await _lineClient.plot(pb.PlotRequest(
           lines: [pb.Line(x0: x0, y0: y, x1: x1, y1: y)], lineColor: 'red'));
     }
 
-    await _client.exportPng(pb.Empty());
+    await _lineClient.exportPng(pb.Empty());
     _out.writeln('Plotted in ${stopwatch.elapsedMilliseconds}ms\n');
   }
 
@@ -341,10 +330,10 @@ class Labeler {
     return boundaries;
   }
 
-  IOSink? _serverOut, _serverErr;
-  Process? _lineServer;
-  late ClientChannel _channel;
-  late pb.LineDetectorClient _client;
+  ServerProcess? _segmentServer;
+  late pb.SegmenterClient _segmentClient;
+  ServerProcess? _lineServer;
+  late pb.LineDetectorClient _lineClient;
   LineFilter? _lastFilter;
   pb.Obstacle? _lastClosest;
 }

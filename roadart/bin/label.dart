@@ -11,6 +11,7 @@ import 'package:roadart/src/labeler.dart';
 const String kImageArg = 'image';
 const String kVideoArg = 'video';
 const String kFrameArg = 'frame';
+const String kSamCountArg = 'sam-count';
 const String kConcurrencyArg = 'concurrency';
 const String kMaxTaskArg = 'max-task';
 const String kResultArg = 'result';
@@ -25,6 +26,8 @@ Future<void> main(List<String> arguments) async {
     ..addOption(kImageArg, help: 'Image file or directory')
     ..addOption(kVideoArg, help: 'Video file')
     ..addOption(kFrameArg, help: 'Frame index', defaultsTo: '0')
+    ..addOption(kSamCountArg,
+        help: 'Label these many frames using SAM', defaultsTo: '0')
     ..addOption(kConcurrencyArg,
         help: 'Number of concurrent labelers', defaultsTo: '1')
     ..addOption(kMaxTaskArg, help: 'max tasks per worker (for debugging)')
@@ -36,6 +39,23 @@ Future<void> main(List<String> arguments) async {
     if (argResults[kImageArg] != null) {
       await listenKeyForImage(argResults[kImageArg]!, argResults[kModelArg]);
     } else if (argResults[kVideoArg] != null) {
+      if (argResults[kSamCountArg] != '0') {
+        final labeler = Labeler();
+        await labeler.start();
+        final labelSet = LabelSet(argResults[kResultArg]!);
+        for (int i = 0; i < int.parse(argResults[kSamCountArg]!); ++i) {
+          final LabelResult? result = await labeler.labelVideoWithSam(
+              argResults[kVideoArg]!,
+              int.parse(argResults[kFrameArg]!) + i,
+              argResults[kModelArg]);
+          if (result != null) {
+            labelSet.add(result.imagePath, result);
+            labelSet.save();
+          }
+        }
+        await labeler.shutdown();
+        return;
+      }
       await listenKeyForVideo(
           argResults[kVideoArg]!,
           int.parse(argResults[kFrameArg]!),

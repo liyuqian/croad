@@ -1,10 +1,11 @@
 from concurrent import futures
+from pathlib import Path
 import sys
 import os
 import traceback
 
 from server.obstacle import ObstacleDetector
-from server.server_utils import flush_print
+from server.server_utils import flush_print, read_video_bgr
 from tfrecord_utils import draw_prediction
 
 import cv2
@@ -110,10 +111,7 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
         return self._detectBgr(bgr, request.model_path)
 
     def _detectVideo(self, request: label_pb2.LineRequest):
-        cap = cv2.VideoCapture(request.video_path)
-        cap.set(cv2.CAP_PROP_POS_FRAMES, request.frame_index)
-        ret, bgr = cap.read()
-        cap.release()
+        bgr = read_video_bgr(request.video_path, request.frame_index)
         return self._detectBgr(bgr, request.model_path)
 
     def _detectBgr(self, bgr, modelPath: str):
@@ -160,10 +158,11 @@ class LineDetector(label_pb2_grpc.LineDetectorServicer):
 
 
 def serve():
+    name: str = Path(__file__).stem
     pid = os.getpid()
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     label_pb2_grpc.add_LineDetectorServicer_to_server(LineDetector(), server)
-    server.add_insecure_port(f"unix:///tmp/line_detection_{pid}.sock")
+    server.add_insecure_port(f"unix:///tmp/{name}_{pid}.sock")
     server.start()
     print(f"Server started with pid {pid}")
     sys.stdout.flush()

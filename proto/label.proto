@@ -68,8 +68,12 @@ service LineDetector {
 }
 
 message SegmentRequest {
-  string input_path = 1;
-  string output_path = 2;
+  // Video path + frame index overrides image path
+  string video_path = 1;
+  int32 frame_index = 2;
+
+  string image_path = 3; // Input image (if video path isn't provided)
+  string output_path = 4;
 }
 
 service Segmenter {
