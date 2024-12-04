@@ -78,4 +78,13 @@ void main() {
     filter.process(lineDetection);
     expect(filter.rightBottomX, greaterThan(640));
   });
+
+  test('LineFilter computes the guess point using video mask', () {
+    final filter = LineFilter();
+    final lineDetection = pb.LineDetection.fromBuffer(
+        File('test/data/mask_line_detection_2023121012_f2675.pb')
+            .readAsBytesSync());
+    filter.process(lineDetection);
+    expect(filter.guessedPoint, isNotNull);
+  });
 }

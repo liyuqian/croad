@@ -234,14 +234,19 @@ class Labeler {
     final String size = '${detection.width}x${detection.height}';
     final List<pb.Obstacle> obstacles = detection.obstacles;
     const kDetectionProtoDump = '/tmp/line_detection.pb';
-    File(kDetectionProtoDump).writeAsBytesSync(detection.writeToBuffer());
+    const kMaskDetectionDump = '/tmp/mask_line_detection.pb';
+    final bool isMask = request.hasImagePath() &&
+        (request.imagePath.contains('mask') ||
+            request.imagePath.contains('segment'));
+    final String dumpPath = isMask ? kMaskDetectionDump : kDetectionProtoDump;
+    File(dumpPath).writeAsBytesSync(detection.writeToBuffer());
     _out.writeln('Detection: ${detection.lines.length} lines detected ($size)');
     _out.writeln('Received detection in ${stopwatch.elapsedMilliseconds}ms');
     _out.writeln('Detected ${obstacles.length} obstacles');
     if (obstacles.isNotEmpty) {
       _out.writeln('First obstacle:\n${obstacles.first.toDebugString()}');
     }
-    _out.writeln('Detection proto saved to $kDetectionProtoDump');
+    _out.writeln('Detection proto saved to $dumpPath');
 
     stopwatch.reset();
     final filter = LineFilter();
