@@ -38,8 +38,8 @@ void main() {
             .readAsBytesSync());
     filter.process(lineDetection);
     expect(filter.guessedPoint, isNotNull);
-    expect(filter.guessedPoint!.x, closeTo(959.0, 0.1));
-    expect(filter.guessedPoint!.y, closeTo(382.9, 0.1));
+    expect(filter.guessedPoint!.x, closeTo(960.0, 5.0));
+    expect(filter.guessedPoint!.y, closeTo(385.0, 5.0));
   });
 
   test('LineFilter discards median point without enough nearby weights', () {

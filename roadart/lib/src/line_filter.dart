@@ -2,10 +2,9 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:roadart/proto/label.pb.dart' as pb;
-import 'package:roadart/proto/label.pbgrpc.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-const double kEpsilon = 1e-8;
+import 'line_merger.dart';
 
 class Range {
   const Range(this.min, this.max);
@@ -14,41 +13,6 @@ class Range {
 }
 
 pb.Point vec2Proto(Vector2 v) => pb.Point(x: v.x, y: v.y);
-
-class Line {
-  final Vector2 start, end;
-  final pb.Line pbLine;
-  final pb.LineDetection fullDetection;
-  Line(this.pbLine, this.fullDetection)
-      : start = Vector2(pbLine.x0, pbLine.y0),
-        end = Vector2(pbLine.x1, pbLine.y1);
-  Vector2 get mid => (start + end) / 2;
-  double get length => (end - start).length;
-  double get xRatio => mid.x / fullDetection.width;
-  double get yRatio => mid.y / fullDetection.height;
-  double get xStartRatio => start.x / fullDetection.width;
-  double get yStartRatio => start.y / fullDetection.height;
-  double get xEndRatio => end.x / fullDetection.width;
-  double get yEndRatio => end.y / fullDetection.height;
-
-  bool get isHorizontal => (end.y - start.y).abs() < kEpsilon;
-  double? get dxOverDy =>
-      isHorizontal ? null : (end.x - start.x) / (end.y - start.y);
-  double x(y) => start.x + dxOverDy! * (y - start.y);
-
-  Vector2? intersect(Line other) {
-    final double x1 = start.x, y1 = start.y, x2 = end.x, y2 = end.y;
-    final double x3 = other.start.x, y3 = other.start.y;
-    final double x4 = other.end.x, y4 = other.end.y;
-    final double denominator = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-    if (denominator.abs() < kEpsilon) return null;
-    final v = Vector2(
-      ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)),
-      ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)),
-    );
-    return v / denominator;
-  }
-}
 
 abstract class LineCondition {
   bool accepts(Line line);
@@ -131,6 +95,9 @@ class LineFilter {
         _leftLines.add(line);
       }
     }
+    final merger = LineMerger(detection.width, detection.height);
+    _leftLines = merger.merge(_leftLines);
+    _rightLines = merger.merge(_rightLines);
 
     final xBounds = Range(0, detection.width.toDouble());
     final yBounds = Range(0, detection.height.toDouble());
@@ -165,6 +132,8 @@ class LineFilter {
         _rightLines.add(line);
       }
     }
+    _rightLines =
+        LineMerger(newDetection.width, newDetection.height).merge(_rightLines);
     _computeRightBottomX(newDetection);
   }
 
@@ -244,7 +213,7 @@ class LineFilter {
   double? get leftBottomX => _leftBottomX;
   double? _leftBottomX;
 
-  LineDetection? get detection => _detection;
+  pb.LineDetection? get detection => _detection;
 
   double _median(List<_WeightedDouble> list) {
     list.sort();
@@ -270,8 +239,8 @@ class LineFilter {
     LeftSlopeCondition(),
   ]);
 
-  final List<Line> _leftLines = [];
-  final List<Line> _rightLines = [];
+  List<Line> _leftLines = [];
+  List<Line> _rightLines = [];
 
   final List<Vector2> _intersections = [];
   final List<double> _weights = [];
@@ -282,7 +251,7 @@ class LineFilter {
   Vector2? _medianPoint;
   Vector2? _guessedPoint;
 
-  LineDetection? _detection;
+  pb.LineDetection? _detection;
 }
 
 class _WeightedDouble implements Comparable<_WeightedDouble> {
