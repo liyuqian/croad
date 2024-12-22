@@ -6,6 +6,19 @@ build-backend = "pdm.backend"
 name = "roadpy"
 version = "0.0.1"
 dependencies = [
-  "wget",
+  "grpcio",
+  "grpcio-tools",
+  "jax",
+  "kaleido",
+  "keras",
+  "opencv-python",
+  "pandas",
+  "pillow",
+  "plotly",
   "segment-anything @ git+https://github.com/facebookresearch/segment-anything.git",
+  "tensorflow",
+  "torch",
+  "torchvision",
+  "transformers",
+  "wget",
 ]
