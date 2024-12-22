@@ -22,7 +22,12 @@ class SamDetector(label_pb2_grpc.Segmenter):
     _predictor: SamPredictor
 
     def __init__(self):
-        model_path = Path(__file__).parent.parent / "ignore" / "sam_vit_h_4b8939.pth"
+        model_folder = model_path = Path(__file__).parent.parent / "ignore"
+        try:
+            os.makedirs(model_folder)
+        except FileExistsError:
+            pass
+        model_path = model_folder / "sam_vit_h_4b8939.pth"
         if not model_path.exists():
             model_url = (
                 "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
