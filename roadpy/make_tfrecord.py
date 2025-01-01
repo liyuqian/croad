@@ -55,9 +55,11 @@ def process_label_result(
                         json_map["yRatio"],
                         json_map["leftRatio"],
                         json_map["rightRatio"],
+                        json_map["yRatioObstacleMin"],
                         json_map["yRatioObstacleMax"],
                         json_map["xRatioObstacleMin"],
                         json_map["xRatioObstacleMax"],
+                        json_map["obstacleConfidence"],
                     ]
                 )
             ),
