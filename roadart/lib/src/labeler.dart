@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:roadart/proto/label.pbgrpc.dart' as pb;
 import 'package:roadart/src/obstacle_filter.dart';
+import 'package:roadart/src/patcher.dart';
 import 'package:vector_math/vector_math_64.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -104,7 +105,9 @@ class Labeler {
         videoPath: videoPath,
         frameIndex: frameIndex,
         outputPath: kSegmentPath));
-    final LineFilter maskLabel = await labelGeneral(kSegmentPath, modelPath);
+    const String kPatchedPath = '/tmp/patched.png';
+    Patcher().patch(kSegmentPath, kPatchedPath);
+    final LineFilter maskLabel = await labelGeneral(kPatchedPath, modelPath);
 
     // Copy the mask line detection for debugging.
     final lineFile = File('/tmp/line_detection.png');
