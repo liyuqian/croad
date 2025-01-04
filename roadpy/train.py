@@ -4,6 +4,7 @@ import glob
 import cv2
 
 from tfrecord_utils import (
+    LABEL_SIZE,
     IMAGE_W,
     IMAGE_H,
     TFRECORD_PATH,
@@ -18,7 +19,6 @@ os.environ["KERAS_BACKEND"] = "jax"
 import tensorflow as tf  # noqa: E402
 import keras  # noqa: E402
 
-LABEL_SIZE = 9
 IGNORE_LEFT = True
 
 print(f"keras backend: {keras.backend.backend()}")
