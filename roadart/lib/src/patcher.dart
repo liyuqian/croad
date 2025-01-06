@@ -24,14 +24,15 @@ class Patcher {
       for (int y = 0; y < h; ++y) {
         final Color c = mask.getPixel(x, y);
         colorCount[c] = (colorCount[c] ?? 0) + 1;
-        if ((c.r + c.g + c.b) > 0) {
-          xToMinY[x] = min(xToMinY[x] ?? h, y);
-          xToMaxY[x] = max(xToMaxY[x] ?? 0, y);
-          yToMinX[y] = min(yToMinX[y] ?? w, x);
-          yToMaxX[y] = max(yToMaxX[y] ?? 0, x);
-          if (colorCount[c]! > maxPositiveCount) {
-            positiveColor = c;
-          }
+        if (c.r + c.g + c.b == 0) {
+          continue;
+        }
+        xToMinY[x] = min(xToMinY[x] ?? h, y);
+        xToMaxY[x] = max(xToMaxY[x] ?? 0, y);
+        yToMinX[y] = min(yToMinX[y] ?? w, x);
+        yToMaxX[y] = max(yToMaxX[y] ?? 0, x);
+        if (colorCount[c]! > maxPositiveCount) {
+          positiveColor = c;
         }
       }
     }
