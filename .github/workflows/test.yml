@@ -1,0 +1,38 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v2
+
+      - name: Set up Python
+        working-directory: roadpy
+        run: |
+          sh shortcut/init_env.sh
+          source ./environment/bin/activate
+          pip install -e .
+
+      - name: Compile proto
+        run: |
+          dart pub global activate protoc_plugin
+          sh proto/shortcut/compile.sh
+
+      - name: Test roadart
+        working-directory: roadart
+        run: |
+          dart pub get
+          dart analyze
+          dart test
