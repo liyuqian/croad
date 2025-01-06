@@ -1,2 +1,4 @@
 .vscode
 *.tfrecord
+**.DS_Store
+data/backup
