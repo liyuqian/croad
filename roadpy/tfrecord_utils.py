@@ -7,6 +7,7 @@ import keras  # noqa: E402
 import tensorflow as tf  # noqa: E402
 
 
+LABEL_SIZE = 9
 IMAGE_W = 320  # 640
 IMAGE_H = 240  # 360
 
@@ -103,16 +104,17 @@ def draw_label(image_bgr, label, point_color=(0, 0, 255), line_color=(255, 0, 0)
         thickness=2,
     )
 
-    obs_b = label[4] * IMAGE_H
-    obs_l = label[5] * IMAGE_W
-    obs_r = label[6] * IMAGE_W
-    cv2.line(
-        image_bgr,
-        (int(obs_l), int(obs_b)),
-        (int(obs_r), int(obs_b)),
-        (0, 255, 0),  # Green
-        thickness=2,
-    )
+    if label.shape[0] >= LABEL_SIZE - 1:
+        obs_b = label[5] * IMAGE_H
+        obs_l = label[6] * IMAGE_W
+        obs_r = label[7] * IMAGE_W
+        cv2.line(
+            image_bgr,
+            (int(obs_l), int(obs_b)),
+            (int(obs_r), int(obs_b)),
+            (0, 255, 0),  # Green
+            thickness=2,
+        )
 
 
 # Return a new bgr image with the prediction lines

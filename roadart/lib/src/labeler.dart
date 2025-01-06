@@ -105,6 +105,13 @@ class Labeler {
         frameIndex: frameIndex,
         outputPath: kSegmentPath));
     final LineFilter maskLabel = await labelGeneral(kSegmentPath, modelPath);
+
+    // Copy the mask line detection for debugging.
+    final lineFile = File('/tmp/line_detection.png');
+    if (lineFile.existsSync()) {
+      lineFile.copySync('/tmp/line_detection_sam.png');
+    }
+
     final LineFilter label = await _handleRequest(pb.LineRequest(
         videoPath: videoPath, frameIndex: frameIndex, modelPath: modelPath));
     return await labelAfterMask(maskLabel, label);

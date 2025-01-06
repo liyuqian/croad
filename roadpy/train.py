@@ -4,6 +4,7 @@ import glob
 import cv2
 
 from tfrecord_utils import (
+    LABEL_SIZE,
     IMAGE_W,
     IMAGE_H,
     TFRECORD_PATH,
@@ -24,12 +25,11 @@ print(f"keras backend: {keras.backend.backend()}")
 
 dataset = tf.data.TFRecordDataset(TFRECORD_PATH)
 
-
 # The decoded png has a BGR format.
 def decode_png(example):
     features = {
         "image": tf.io.FixedLenFeature([], tf.string),
-        "label": tf.io.FixedLenFeature([4], tf.float32),
+        "label": tf.io.FixedLenFeature([LABEL_SIZE], tf.float32),
     }
     example = tf.io.parse_single_example(example, features)
     image = tf.image.decode_png(example["image"], channels=3)
@@ -37,8 +37,10 @@ def decode_png(example):
     return image, example["label"]
 
 
-def bgr_to_input(image, label):
-    return bgr_to_rgb(image), tf.multiply(label, [1, 1, 0 if IGNORE_LEFT else 1, 1])
+def bgr_to_input(image, label: tf.Tensor):
+    # TODO: use obstacle labels (labels[4:9])
+    sliced = label[:4]
+    return bgr_to_rgb(image), tf.multiply(sliced, [1, 1, 0 if IGNORE_LEFT else 1, 1])
 
 
 def load_dataset_rgb_int8(check: bool = False):
