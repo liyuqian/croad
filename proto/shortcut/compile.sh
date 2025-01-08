@@ -1,6 +1,11 @@
 root_path=$(dirname $0)/../..
 dart_out_path=$root_path/roadart/lib
-dart_plugin=--plugin=$HOME/.pub-cache/bin/protoc-gen-dart
+if [ -z "$PUB_CACHE" ]; then
+  pub_cache=$HOME/.pub-cache
+else
+  pub_cache=$PUB_CACHE
+fi
+dart_plugin=--plugin=$pub_cache/bin/protoc-gen-dart
 py_path=$root_path/roadpy
 set -x
 
