@@ -2,3 +2,5 @@
 *.tfrecord
 **.DS_Store
 data/backup
+data/videos
+secret

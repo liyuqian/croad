@@ -1,3 +1,32 @@
+# Video label management
+
+Yaml file `data/train_videos.yaml` specifies a set of videos to generate the
+labels for model training.
+```yaml
+videos:
+  # Downloading videos may require authentications (e.g., Google drive).
+  - url: https://...        # Where to download the video
+    local_name: xyz1234.mp4 # Local name after downloading
+    ranges:                 # Specify valid time ranges
+      - begin_time: 00:00:00
+        end_time: 00:01:00
+      - begin_time: 00:02:00
+        end_time: 00:04:00
+  - url: https://...
+    local_name: xyz1235.mp4
+    ...
+```
+
+The tool `roadart/bin/videos_to_training.dart` will read that yaml and output
+the training data (`tfrecords` for now, maybe `pt`, `hdf5` in the future).
+The `videos_to_training.dart` will coordinate many scripts (e.g., `label.dart`,
+`make_tfrecord.py`) to make the final training data.
+```bash
+  dart roadart/bin/videos_to_training.dart data/train_videos.yaml
+```
+
+# Links
+
 Some links to the open-source 3rd party training data:
 - https://github.com/commaai/comma10k
   - No restriction. MIT license.
