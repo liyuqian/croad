@@ -10,16 +10,19 @@ import 'package:yaml/yaml.dart';
 class _Runner {
   static const String kRelativeOauthSecretPath = 'secret/oauth_secret.json';
   static const String kRelativeAccessTokenPath = 'secret/access_token.json';
+  static const String kRelativeYamlPath = 'data/train_videos.yaml';
 
-  final String yamlPath;
+  final String rootPath;
+  late String yamlPath;
+  late String videosPath;
 
-  _Runner(this.yamlPath) {
-    _rootPath = File(yamlPath).parent.parent.path;
-    _videosPath = '$_rootPath/data/videos';
+  _Runner(this.rootPath) {
+    yamlPath = '$rootPath/$kRelativeYamlPath';
+    videosPath = '$rootPath/data/videos';
   }
 
-  String get oauthSecretPath => '$_rootPath/$kRelativeOauthSecretPath';
-  String get accessTokenPath => '$_rootPath/$kRelativeAccessTokenPath';
+  String get oauthSecretPath => '$rootPath/$kRelativeOauthSecretPath';
+  String get accessTokenPath => '$rootPath/$kRelativeAccessTokenPath';
 
   Future<Map<String, dynamic>> loadOauthSecretJson() async {
     if (whichSync('gcloud') == null) {
@@ -92,7 +95,7 @@ class _Runner {
     final AuthClient authClient = await getClient();
     final driveApi = drive.DriveApi(authClient);
 
-    final String localPath = '$_videosPath/$localName';
+    final String localPath = '$videosPath/$localName';
     final localFile = File(localPath);
     if (localFile.existsSync()) {
       print('$localPath already exists.');
@@ -117,19 +120,18 @@ class _Runner {
     await media.stream.pipe(sink);
     await sink.close();
   }
-
-  late String _rootPath;
-  late String _videosPath;
 }
 
 Future<void> main(List<String> args) async {
   if (args.isEmpty) {
-    throw Exception('Please provide train_videos.yaml path.');
+    print('Please provide croad root path.');
+    print('Example: dart bin/videos_to_training.dart ~/github/croad');
+    exit(1);
   }
 
-  final String yamlPath = args.first;
-  final runner = _Runner(yamlPath);
-  final dynamic videosYaml = loadYaml(File(args[0]).readAsStringSync());
+  final String rootPath = args.first;
+  final runner = _Runner(rootPath);
+  final dynamic videosYaml = loadYaml(File(runner.yamlPath).readAsStringSync());
   for (final entry in videosYaml['videos']) {
     await runner.download(entry['url'], entry['local_name']);
   }
