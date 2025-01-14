@@ -1,0 +1,13 @@
+videos:
+  - url: https://drive.google.com/file/d/10mPFJE6w0ruBm3NjMSwjUT3KuALPkHi_/view?usp=drive_link
+    local_name: 2023121012_front.mp4
+    ranges:
+      - begin_time: 00:01:20
+        end_time: 00:05:17
+      - begin_time: 00:05:30
+        end_time: 00:10:12
+  - url: https://drive.google.com/file/d/1KeJHcxy9rQ_btHaixbnTf1g0QF5m_3ly/view?usp=drive_link
+    local_name: 20240921_nos-keyg-lur_front.mp4
+    ranges:
+      - begin_time: 00:01:35
+        end_time: 00:10:50

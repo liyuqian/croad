@@ -6,3 +6,6 @@
 *.pbenum.dart
 *.pbgrpc.dart
 *.pbjson.dart
+
+build
+!build/README.md
