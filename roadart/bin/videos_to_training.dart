@@ -97,6 +97,7 @@ class _Runner {
     final AuthClient authClient = await getClient();
     final driveApi = drive.DriveApi(authClient);
 
+    Directory(videosPath).createSync(recursive: true);
     final String localPath = '$videosPath/$localName';
     final localFile = File(localPath);
     if (localFile.existsSync()) {
