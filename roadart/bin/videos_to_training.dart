@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:process_run/process_run.dart';
 import 'package:yaml/yaml.dart';
 
@@ -85,7 +86,8 @@ class _Runner {
     return digest.toString();
   }
 
-  Future<void> download(String fileUrl, String localName) async {
+  /// Return the path of the downloaded file.
+  Future<String> download(String fileUrl, String localName) async {
     final pattern = RegExp(r'https://drive.google.com/file/d/([^/]+)/');
     final RegExpMatch? match = pattern.firstMatch(fileUrl);
     if (match == null) {
@@ -95,6 +97,7 @@ class _Runner {
     final AuthClient authClient = await getClient();
     final driveApi = drive.DriveApi(authClient);
 
+    Directory(videosPath).createSync(recursive: true);
     final String localPath = '$videosPath/$localName';
     final localFile = File(localPath);
     if (localFile.existsSync()) {
@@ -106,7 +109,7 @@ class _Runner {
       final String remoteSha256 = driveFile.sha256Checksum!;
       if (localSha256 == remoteSha256) {
         print('Skip $localPath that matches sha256.');
-        return;
+        return localPath;
       } else {
         print('$localPath sha256 mismatch: $localSha256 != $remoteSha256');
       }
@@ -119,7 +122,42 @@ class _Runner {
     final sink = localFile.openWrite();
     await media.stream.pipe(sink);
     await sink.close();
+    return localPath;
   }
+
+  Future<void> labelVideo(String path, int beginIndex, int endIndex) async {
+    final String labelBinPath = '$rootPath/roadart/bin/label.dart';
+    final args = [
+      '--video=$path',
+      '--result=$rootPath/data/video_label_result.json',
+      '--frame=$beginIndex',
+      '--sam-count=${endIndex - beginIndex}'
+    ];
+    final cmd = 'dart $labelBinPath ${args.join(' ')}';
+    await run(cmd);
+  }
+}
+
+Future<double> getFps(String videoPath) async {
+  if (whichSync('ffprobe') == null) {
+    print('ffmpeg is not installed');
+    print('See, e.g., https://formulae.brew.sh/formula/ffmpeg');
+    exit(1);
+  }
+  final List<ProcessResult> results = await run(
+      'ffprobe -v 0 -show_entries stream=r_frame_rate -of csv=p=0 $videoPath');
+  final List<String> numbers = results.first.stdout.toString().split('/');
+  if (numbers.length != 2) {
+    throw Exception('Unexpected frame rate: ${results.first.stdout}');
+  }
+  return double.parse(numbers.first) / double.parse(numbers.last);
+}
+
+int parseTimeAsFrameIndex(String hhmmss, double fps) {
+  final kEpoch = DateTime.fromMillisecondsSinceEpoch(0);
+  final Duration t =
+      DateFormat('HH:mm:ss').parse(hhmmss, true).difference(kEpoch);
+  return (t.inMilliseconds * 0.001 * fps).round();
 }
 
 Future<void> main(List<String> args) async {
@@ -133,7 +171,13 @@ Future<void> main(List<String> args) async {
   final runner = _Runner(rootPath);
   final dynamic videosYaml = loadYaml(File(runner.yamlPath).readAsStringSync());
   for (final entry in videosYaml['videos']) {
-    await runner.download(entry['url'], entry['local_name']);
+    final videoPath = await runner.download(entry['url'], entry['local_name']);
+    final double fps = await getFps(videoPath);
+    for (YamlMap range in entry['ranges']) {
+      final int beginIndex = parseTimeAsFrameIndex(range['begin_time']!, fps);
+      final int endIndex = parseTimeAsFrameIndex(range['end_time']!, fps);
+      await runner.labelVideo(videoPath, beginIndex, endIndex);
+    }
   }
 
   exit(0);

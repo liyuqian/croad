@@ -16,6 +16,7 @@ dependencies:
   grpc: ^4.0.1
   http: ^1.2.2
   image: ^4.3.0
+  intl: ^0.20.1
   json_annotation: ^4.8.1
   path: ^1.9.0
   process_run: ^1.2.2+1
