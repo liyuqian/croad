@@ -18,7 +18,7 @@ dependencies = [
   "plotly",
   "segment-anything @ git+https://github.com/facebookresearch/segment-anything.git",
   "tensorflow",
-  "torch",
+  "torch==2.1.2",
   "torchvision",
   "transformers",
   "wget",
