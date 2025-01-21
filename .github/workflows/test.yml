@@ -14,12 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dart-lang/setup-dart@v1
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v2
+      - uses: arduino/setup-protoc@v2
 
       - name: Install Python packages
         working-directory: roadpy

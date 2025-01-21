@@ -6,6 +6,7 @@ build-backend = "pdm.backend"
 name = "roadpy"
 version = "0.0.1"
 dependencies = [
+  "click",
   "grpcio",
   "grpcio-tools",
   "jax[cuda12]; sys_platform == 'linux'",
@@ -18,7 +19,7 @@ dependencies = [
   "plotly",
   "segment-anything @ git+https://github.com/facebookresearch/segment-anything.git",
   "tensorflow",
-  "torch==2.1.2",
+  "torch==2.3.1",
   "torchvision",
   "transformers",
   "wget",
