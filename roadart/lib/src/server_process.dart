@@ -11,7 +11,8 @@ class ServerProcess {
     final String binPath = p.dirname(Platform.script.path);
     final String root = Directory(binPath).parent.parent.path;
     final String roadpy = p.join(root, 'roadpy');
-    _server = await Process.start('environment/bin/python', ['server/$name.py'],
+    _server = await Process.start(
+        'environment/bin/python', ['-m', 'server.$name'],
         workingDirectory: roadpy);
     final String prefix = '/tmp/${name}_${_server!.pid}';
     final String outPath = '$prefix.out';

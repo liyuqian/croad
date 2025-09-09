@@ -20,7 +20,7 @@ dependencies:
   json_annotation: ^4.8.1
   path: ^1.9.0
   process_run: ^1.2.2+1
-  protobuf: ^3.1.0
+  protobuf: ^4.0.0
   vector_math: ^2.1.4
   yaml: ^3.1.3
 
