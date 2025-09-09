@@ -22,7 +22,7 @@ the training data (`tfrecords` for now, maybe `pt`, `hdf5` in the future).
 The `videos_to_training.dart` will coordinate many scripts (e.g., `label.dart`,
 `make_tfrecord.py`) to make the final training data.
 ```bash
-  dart roadart/bin/videos_to_training.dart data/train_videos.yaml
+  dart roadart/bin/videos_to_training.dart ~/github/croad
 ```
 
 # Links
